@@ -1,0 +1,174 @@
+diff --git a/src/common/backends/imgui/launcher_imgui.cpp b/src/common/backends/imgui/launcher_imgui.cpp
+index 46dbc44..c4e93e0 100644
+--- a/src/common/backends/imgui/launcher_imgui.cpp
++++ b/src/common/backends/imgui/launcher_imgui.cpp
+@@ -13121,6 +13121,117 @@ const LauncherPanel kPanelRegistry[] = {
+     { nullptr,              LNG_VIEW_DASHBOARD,  0,             nullptr,      nullptr },   // sentinel
+ };
+ 
++#if defined(RECOMP_UI_LIVE_LOG)
++extern "C" {
++size_t recomp_live_log_copy(char *dst, size_t cap, uint64_t *out_seq, size_t *out_lines);
++void recomp_live_log_clear(void);
++size_t recomp_live_log_line_count(void);
++}
++
++static bool g_live_log_open = false;
++
++static void draw_live_log_view(const LauncherTheme& th) {
++    static char s_log_buf[65536];
++    static uint64_t s_last_seq = 0;
++    static size_t s_line_count = 0;
++    static bool s_auto_scroll = true;
++    static bool s_scroll_next = false;
++
++    uint64_t seq = 0;
++    size_t lines = 0;
++    recomp_live_log_copy(s_log_buf, sizeof(s_log_buf), &seq, &lines);
++    if (seq != s_last_seq) {
++        s_last_seq = seq;
++        s_line_count = lines;
++        if (s_auto_scroll) s_scroll_next = true;
++    }
++
++    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.05f, 0.06f, 0.09f, 0.94f));
++    ImGui::PushStyleColor(ImGuiCol_Border, imcol(th.border, 0.6f));
++    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, px(8.0f));
++    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(px(14.0f), px(10.0f)));
++    if (ImGui::BeginChild("##live_log_view", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
++        // Toolbar row (clean left-to-right flow, zero overlapping)
++        ImGui::PushStyleColor(ImGuiCol_Text, col(th.accent2));
++        ImGui::AlignTextToFramePadding();
++        ImGui::Text("LIVE LOG  (%zu linhas)", s_line_count);
++        ImGui::PopStyleColor();
++
++        ImGui::SameLine(0, px(16.0f));
++        ImGui::Checkbox("Auto-scroll##livelog", &s_auto_scroll);
++
++        ImGui::SameLine(0, px(16.0f));
++        const float btn_h = ImGui::GetFrameHeight();
++        if (ImGui::Button("Copiar##livelog", ImVec2(px(74.0f), btn_h))) {
++            ImGui::SetClipboardText(s_log_buf);
++        }
++        ImGui::SameLine(0, px(8.0f));
++        if (ImGui::Button("Limpar##livelog", ImVec2(px(74.0f), btn_h))) {
++            recomp_live_log_clear();
++            s_log_buf[0] = '\0';
++            s_line_count = 0;
++        }
++        ImGui::SameLine(0, px(8.0f));
++        if (ImGui::Button("Voltar##livelog", ImVec2(px(74.0f), btn_h))) {
++            g_live_log_open = false;
++        }
++
++        ImGui::Dummy(ImVec2(0, px(4.0f)));
++        ImGui::Separator();
++        ImGui::Dummy(ImVec2(0, px(4.0f)));
++
++        // Scrollable console output
++        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.03f, 0.035f, 0.055f, 0.98f));
++        if (ImGui::BeginChild("##live_log_scroll", ImVec2(0, 0), ImGuiChildFlags_None,
++                              ImGuiWindowFlags_HorizontalScrollbar)) {
++            if (s_log_buf[0] == '\0') {
++                ImGui::PushStyleColor(ImGuiCol_Text, col(th.text_muted));
++                ImGui::TextUnformatted("Aguardando eventos do runtime...");
++                ImGui::PopStyleColor();
++            } else {
++                const char* p = s_log_buf;
++                while (*p) {
++                    const char* nl = std::strchr(p, '\n');
++                    const char* end = nl ? nl : (p + std::strlen(p));
++                    std::string line(p, (size_t)(end - p));
++
++                    ImVec4 tint(0.84f, 0.88f, 0.94f, 1.0f);
++                    if (line.find("error") != std::string::npos ||
++                        line.find("ERROR") != std::string::npos ||
++                        line.find("failed") != std::string::npos ||
++                        line.find("FAILED") != std::string::npos) {
++                        tint = ImVec4(1.0f, 0.45f, 0.45f, 1.0f);
++                    } else if (line.find("warn") != std::string::npos ||
++                               line.find("WARN") != std::string::npos ||
++                               line.find("No joysticks") != std::string::npos) {
++                        tint = ImVec4(1.0f, 0.82f, 0.38f, 1.0f);
++                    } else if (line.rfind("[host", 0) == 0 ||
++                               line.rfind("[Launcher]", 0) == 0 ||
++                               line.rfind("[snes", 0) == 0) {
++                        tint = ImVec4(0.48f, 0.88f, 1.0f, 1.0f);
++                    }
++                    ImGui::PushStyleColor(ImGuiCol_Text, tint);
++                    ImGui::TextUnformatted(line.c_str(), line.c_str() + line.size());
++                    ImGui::PopStyleColor();
++
++                    if (!nl) break;
++                    p = nl + 1;
++                }
++            }
++            if (s_scroll_next) {
++                ImGui::SetScrollHereY(1.0f);
++                s_scroll_next = false;
++            }
++        }
++        ImGui::EndChild();
++        ImGui::PopStyleColor();
++    }
++    ImGui::EndChild();
++    ImGui::PopStyleVar(2);
++    ImGui::PopStyleColor(2);
++}
++#endif
++
+ // Footer: a fixed-height band with the neon divider pinned to its TOP and the
+ // CTA vertically centred inside it. Laid out from an explicit origin (not the
+ // running cursor) so it is pixel-identical on every view and the CTA's glow
+@@ -13143,18 +13254,39 @@ void draw_footer(LauncherModel* m, const LauncherTheme& th, float footer_h) {
+     const float cta_y  = band_y + (band_h - play_h) * 0.5f;
+ 
+     const ImVec2 win = ImGui::GetWindowPos();
++    float left_end_x = origin.x;
+     if (m->view == LNG_VIEW_DASHBOARD && !is_ps2_host(m)) {
+         bool skip = m->s.skip_launcher != 0;
+         ImGui::SetCursorScreenPos(ImVec2(origin.x, cta_y + (play_h - ImGui::GetFrameHeight()) * 0.5f));
+         if (ImGui::Checkbox(ui_text("Skip launcher on boot"), &skip))
+             launcher_model_request_skip_toggle(m);
++        left_end_x = ImGui::GetItemRectMax().x + px(14.0f);
+     } else if (m->view == LNG_VIEW_SETTINGS &&
+                launcher_model_can_restore_defaults(m)) {
+         ImGui::SetCursorScreenPos(
+             ImVec2(origin.x, cta_y + (play_h - px(34.0f)) * 0.5f));
+         if (ImGui::Button(ui_text("Restore Defaults"), ImVec2(px(150.0f), px(34.0f))))
+             launcher_model_request_restore_defaults(m);
++        left_end_x = ImGui::GetItemRectMax().x + px(14.0f);
++    }
++#if defined(RECOMP_UI_LIVE_LOG)
++    if (m->view != LNG_VIEW_LOBBY && m->view != LNG_VIEW_NETPLAY) {
++        const float log_btn_w = px(120.0f);
++        const float right_reserved = play_w + (m->in_session ? (px(170.0f) + px(24.0f)) : px(16.0f));
++        const float right_limit = origin.x + fullw - right_reserved;
++        if (left_end_x + log_btn_w <= right_limit) {
++            char log_btn[48];
++            std::snprintf(log_btn, sizeof(log_btn), g_live_log_open ? "Fechar Log" : "Live Log (%zu)",
++                          recomp_live_log_line_count());
++            ImGui::SetCursorScreenPos(
++                ImVec2(left_end_x, cta_y + (play_h - px(34.0f)) * 0.5f));
++            if (ImGui::Button(log_btn, ImVec2(log_btn_w, px(34.0f))))
++                g_live_log_open = !g_live_log_open;
++        }
+     }
++#else
++    (void)left_end_x;
++#endif
+     if (m->view == LNG_VIEW_LOBBY) {
+         draw_lobby_footer(m, th, origin, cta_y, play_h, fullw);
+         return;
+@@ -14847,6 +14979,11 @@ void draw_ui(LauncherModel* m, const LauncherTheme& th, int logical_w, int logic
+     float body_h = ImGui::GetContentRegionAvail().y - footer_h;
+     if (body_h < px(80.0f)) body_h = px(80.0f);
+     begin_container("body", ImVec2(0, body_h));
++#if defined(RECOMP_UI_LIVE_LOG)
++    if (g_live_log_open) {
++        draw_live_log_view(th);
++    } else
++#endif
+     switch (m->view) {
+         case LNG_VIEW_DASHBOARD:  draw_dashboard(m, th, logical_w); break;
+         case LNG_VIEW_SETTINGS:   draw_settings(m, th);             break;
