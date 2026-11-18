@@ -62,9 +62,9 @@ exec bash "$IMPL" \
   --runtime-dir mods \
   --build-dir "$BUILD_DIR" \
   --artifact "$PLATFORM" \
-  --exe-name AladdinSNESRecomp \
-  --zip-prefix aladdin \
-  --display-name "Aladdin" \
+  --exe-name AgrabahPort \
+  --zip-prefix agrabahport \
+  --display-name "AgrabahPort" \
   --rom-hint "$ROM_FILE" \
   --rom-sha256 "$ROM_SHA256" \
   --rom-crc32 "$ROM_CRC32" \

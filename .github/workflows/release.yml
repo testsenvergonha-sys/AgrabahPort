@@ -71,7 +71,7 @@ permissions:
 
 env:
   EXE_NAME: AladdinSNESRecomp
-  ZIP_PREFIX: aladdin
+  ZIP_PREFIX: agrabahport
 
 jobs:
   preflight:
@@ -191,6 +191,9 @@ jobs:
 
       - name: Record framework pins
         run: bash snesrecomp/tools/ci/record_pins.sh
+
+      - name: Apply Live Log UI patch
+        run: sh tools/apply_patches.sh
 
       # A setup host is defined by what it lacks. The checkout must carry no
       # generated C; if it ever does, that is committed ROM-derived output and
@@ -326,7 +329,7 @@ jobs:
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
             echo "tag ${TAG} already exists at $(git rev-parse --short "${TAG}") (re-release from that tag)"
           else
-            git tag -a "${TAG}" -m "Aladdin ${TAG}" "${GITHUB_SHA}"
+            git tag -a "${TAG}" -m "AgrabahPort ${TAG}" "${GITHUB_SHA}"
             git push origin "refs/tags/${TAG}"
             echo "tagged ${GITHUB_SHA::12} as ${TAG}"
           fi
@@ -340,12 +343,12 @@ jobs:
           ROM_FILE="$(python3 snesrecomp/tools/rom_identity.py rom_identity.txt --get rom_file)"
           ROM_SHA256="$(python3 snesrecomp/tools/rom_identity.py rom_identity.txt --get expected_sha256)"
           {
-            echo "Aladdin ${TAG} — setup packs"
+            echo "AgrabahPort ${TAG} — Disney's Aladdin (SNES, 1993) setup packs"
             echo
-            echo "These packs do not contain the game. Each holds a setup program, the"
-            echo "recompiler and the source; on first run it takes your own copy of"
-            echo "${ROM_FILE} (SHA-256 ${ROM_SHA256}), recompiles it locally, and builds"
-            echo "the playable game. No ROM data is included or downloaded."
+            echo "These packs do not contain the game or any copyrighted ROM data. Each holds a"
+            echo "setup host, the recompiler and the source; on first run it takes your own legal"
+            echo "copy of ${ROM_FILE} (SHA-256 ${ROM_SHA256}), recompiles it locally, and builds"
+            echo "the playable PC port. No ROM data is included or downloaded."
             echo
             if [[ "${{ inputs.embed_toolchain }}" != "false" ]]; then
               echo "The portable build tools (cmake-clang-v1) are embedded in every pack."
@@ -366,7 +369,7 @@ jobs:
         with:
           tag_name: ${{ needs.preflight.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: "Aladdin ${{ needs.preflight.outputs.tag }}"
+          name: "AgrabahPort ${{ needs.preflight.outputs.tag }}"
           body_path: notes.md
           files: |
             dist/${{ env.ZIP_PREFIX }}-*.zip

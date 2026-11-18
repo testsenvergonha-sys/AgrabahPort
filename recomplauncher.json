@@ -1,0 +1,26 @@
+{
+  "$schema": "https://recomplauncher.com/schema/recomplauncher.json",
+  "format": 1,
+  "name": "AgrabahPort",
+  "repo": "testsenvergonha-sys/AgrabahPort",
+  "game": {
+    "kind": "iso",
+    "label": "Your legal headerless SNES ROM (.sfc) of Disney's Aladdin (USA).",
+    "dumps": [
+      {
+        "name": "Disney's Aladdin (USA) (Headerless .sfc)",
+        "crc32": "124d8e4d"
+      }
+    ]
+  },
+  "start": {
+    "program": [
+      "AgrabahPort.exe",
+      "AgrabahPort"
+    ],
+    "args": [
+      "--rom",
+      "{game}"
+    ]
+  }
+}
