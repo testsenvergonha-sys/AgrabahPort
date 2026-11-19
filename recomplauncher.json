@@ -32,6 +32,7 @@
       "format": "ini",
       "file": [
         { "path": "{install}/config.ini", "if": "{install}/portable.txt" },
+        { "path": "{local}/AgrabahPort/config.ini" },
         { "path": "{install}/config.ini" }
       ],
       "ensure": {
@@ -45,15 +46,18 @@
     }
   ],
   "saves": [
-    "{install}/saves"
+    "{install}/saves",
+    "{local}/AgrabahPort/saves"
   ],
   "folders": {
     "saves": [
       { "path": "{install}/saves", "if": "{install}/portable.txt" },
+      { "path": "{local}/AgrabahPort/saves" },
       { "path": "{install}/saves" }
     ],
     "logs": [
       { "path": "{install}", "if": "{install}/portable.txt" },
+      { "path": "{local}/AgrabahPort" },
       { "path": "{install}" }
     ]
   },
