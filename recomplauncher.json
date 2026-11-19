@@ -31,6 +31,7 @@
       "id": "main",
       "format": "ini",
       "file": [
+        { "path": "{install}/config.ini", "if": "{install}/portable.txt" },
         { "path": "{install}/config.ini" }
       ],
       "ensure": {
@@ -45,9 +46,11 @@
   ],
   "folders": {
     "saves": [
+      { "path": "{install}/saves", "if": "{install}/portable.txt" },
       { "path": "{install}/saves" }
     ],
     "logs": [
+      { "path": "{install}", "if": "{install}/portable.txt" },
       { "path": "{install}" }
     ]
   },
