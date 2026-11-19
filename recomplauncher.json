@@ -16,6 +16,8 @@
   },
   "start": {
     "program": [
+      "build/AgrabahPort.exe",
+      "build/AgrabahPort",
       "AgrabahPort.exe",
       "AgrabahPort"
     ],
