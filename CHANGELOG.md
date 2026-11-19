@@ -1,0 +1,42 @@
+# Changelog / Registro de Atualizações
+
+Todas as mudanças notáveis no projeto **AgrabahPort** serão documentadas neste arquivo de forma detalhada e transparente.
+
+---
+
+## [0.1.2] - 2026-11-19
+
+### 🎮 Modo Portátil e Experiência do Jogador (Player-First)
+- **Modo 100% Portátil (`portable.txt`):** O jogo agora pode ser executado a partir de qualquer pasta ou pendrive. Todas as configurações (`config.ini`), estados salvos e saves de bateria (`saves/`) são mantidos dentro do próprio diretório do jogo, sem espalhar arquivos pelo sistema (`AppData` ou `Documents`).
+- **Detecção Automática da ROM:** Ao abrir, o executável procura automaticamente pela ROM (`Aladdin.sfc` ou `Aladdin.smc`) na mesma pasta do executável. Se a ROM estiver presente, o jogo inicia instantaneamente em menos de 1 segundo! Se não estiver presente, uma interface limpa solicita que o jogador aponte para sua cópia legal.
+- **Executável Jogável Standalone (Windows):** Pacote pré-compilado leve (~3.5 MB compactado) contendo o executável nativo direto, eliminando a necessidade de compilação demorada pelo jogador no primeiro uso e prevenindo falsos-positivos de antivírus.
+- **Documentação Redesenhada:** READMEs completamente reformulados com foco no jogador comum (guia rápido de 3 passos, tabelas visuais de controles para Teclado e Controles Xbox/PlayStation/Switch, lista de recursos e FAQ). Informações de compilação técnica foram movidas para seções recolhíveis para desenvolvedores.
+
+---
+
+## [0.1.1] - 2026-11-19
+
+### ⚙️ Integração com RecompLauncher e Correção do Setup Host
+- **Auto-Injeção do Assistente no Setup Host (`src/main.c`):** Corrigido o erro que causava encerramento abrupto com código 1 quando iniciado através do RecompLauncher passando `--rom` direto. Agora o host detecta a ausência do código compilado e abre automaticamente o assistente de primeira execução.
+- **Suporte Completo ao RecompLauncher Level 2 (`recomplauncher.json`):**
+  - Configurações gráficas integradas à interface do launcher (Modo Janela vs Tela Cheia, Escalas 2x/3x/4x, Proporção 4:3 vs 8:7).
+  - Seleção de Shaders CRT / Filtros de vídeo (Sharp Pixels, CRT Soft Scanlines, Warm Composite, LCD Grid).
+  - VSync ativado/desativado.
+  - Limite de 32 sprites por linha removido (elimina oscilação/flickering de personagens).
+  - Slider de Volume Principal (0% a 100%).
+  - Ações rápidas de abertura de pastas de saves e logs.
+- **Priorização de Executável:** O launcher agora tenta executar primeiramente `build/AgrabahPort.exe` (quando já compilado) e usa o host como fallback seguro.
+- **Badge Oficial:** Adicionado badge dinâmico do RecompLauncher aos READMEs.
+
+---
+
+## [0.1.0] - 2026-11-18
+
+### 🚀 Lançamento Inicial (Static Recompilation)
+- **Recompilação Estática 65816 → C:** Tradução Ahead-of-Time das instruções do processador do Super Nintendo para C nativo com SDL3 e OpenGL.
+- **Interface e Subsistema Windows GUI Puro:** Compilado como executável nativo sem janela preta de prompt de comando em segundo plano.
+- **Live Log Integrado:** Visualizador de logs em tempo real integrado à interface do menu do jogo.
+- **Shaders CRT e Escala Mode 7:** Presets de shaders em GLSL com escala Mode 7 HD de 8x e supersampling.
+- **Menu do Launcher em Jogo (`ESC`):** Menu pausável com opções de vídeo, áudio, controles e salvamento.
+- **Save States e Rewind:** Suporte a salvamento rápido de estados (`F1` a `F10`), navegador visual (`F11`) e rebobinamento em tempo real (`F12`).
+- **Ícone Personalizado:** Arte original em pixel-art de 16 bits embutida diretamente no executável.
