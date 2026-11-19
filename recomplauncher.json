@@ -9,7 +9,8 @@
     "dumps": [
       {
         "name": "Disney's Aladdin (USA) (Headerless .sfc)",
-        "crc32": "124d8e4d"
+        "crc32": "124d8e4d",
+        "size": 1310720
       }
     ]
   },
@@ -22,5 +23,114 @@
       "--rom",
       "{game}"
     ]
-  }
+  },
+  "config": [
+    {
+      "id": "main",
+      "format": "ini",
+      "file": [
+        { "path": "{install}/config.ini" }
+      ],
+      "ensure": {
+        "Graphics/WindowSize": "Auto",
+        "Graphics/WindowScale": "3",
+        "Graphics/Fullscreen": "0",
+        "Graphics/VSync": "1",
+        "Graphics/Shader": "assets/shaders/sharp.glslp",
+        "Sound/Volume": "100"
+      }
+    }
+  ],
+  "folders": {
+    "saves": [
+      { "path": "{install}/saves" }
+    ],
+    "logs": [
+      { "path": "{install}" }
+    ]
+  },
+  "settings": [
+    {
+      "id": "screen_mode",
+      "label": "Display mode",
+      "help": "Choose between windowed mode and desktop fullscreen.",
+      "choices": [
+        { "label": "Windowed", "set": { "Graphics/Fullscreen": "0" } },
+        { "label": "Fullscreen", "set": { "Graphics/Fullscreen": "1" } }
+      ],
+      "defaults": { "Graphics/Fullscreen": "0" }
+    },
+    {
+      "id": "window_scale",
+      "label": "Window scale",
+      "help": "Scaling factor for windowed mode (3x recommended for 1080p/768p displays).",
+      "choices": [
+        { "label": "2x (512x448)", "set": { "Graphics/WindowScale": "2" } },
+        { "label": "3x (768x672)", "set": { "Graphics/WindowScale": "3" } },
+        { "label": "4x (1024x896)", "set": { "Graphics/WindowScale": "4" } }
+      ],
+      "defaults": { "Graphics/WindowScale": "3" },
+      "when": { "Graphics/Fullscreen": "0" }
+    },
+    {
+      "id": "aspect_ratio",
+      "label": "Aspect ratio",
+      "help": "Display ratio: 4:3 (authentic CRT TV aspect) or 8:7 (1:1 SNES internal pixel aspect).",
+      "choices": [
+        { "label": "4:3 (CRT TV)", "set": { "Graphics/DisplayAspect": "4:3" } },
+        { "label": "8:7 (Square Pixels)", "set": { "Graphics/DisplayAspect": "8:7" } }
+      ],
+      "defaults": { "Graphics/DisplayAspect": "4:3" }
+    },
+    {
+      "id": "shader_preset",
+      "label": "CRT / Video shader",
+      "help": "Post-processing shader filter applied to the picture.",
+      "choices": [
+        { "label": "Sharp Pixel (Recommended)", "set": { "Graphics/Shader": "assets/shaders/sharp.glslp" } },
+        { "label": "CRT Soft Scanlines", "set": { "Graphics/Shader": "assets/shaders/crt-soft.glslp" } },
+        { "label": "Warm Composite TV", "set": { "Graphics/Shader": "assets/shaders/warm-composite.glslp" } },
+        { "label": "LCD Grid", "set": { "Graphics/Shader": "assets/shaders/lcd-grid.glslp" } },
+        { "label": "None (Raw Bilinear)", "set": { "Graphics/Shader": "" } }
+      ],
+      "defaults": { "Graphics/Shader": "assets/shaders/sharp.glslp" }
+    },
+    {
+      "id": "vsync",
+      "label": "VSync",
+      "help": "Synchronize game refresh rate with display to avoid screen tearing.",
+      "choices": [
+        { "label": "On (Smooth)", "set": { "Graphics/VSync": "1" } },
+        { "label": "Off (Lowest latency)", "set": { "Graphics/VSync": "0" } }
+      ],
+      "defaults": { "Graphics/VSync": "1" }
+    },
+    {
+      "id": "sprite_limits",
+      "label": "Sprite flicker limit",
+      "help": "Prevent flickering by removing the 32-sprite-per-scanline hardware limit.",
+      "choices": [
+        { "label": "Unlimited (No flickering)", "set": { "Graphics/NoSpriteLimits": "1" } },
+        { "label": "Console Accurate (Flickers)", "set": { "Graphics/NoSpriteLimits": "0" } }
+      ],
+      "defaults": { "Graphics/NoSpriteLimits": "1" }
+    },
+    {
+      "id": "master_volume",
+      "label": "Master Volume",
+      "help": "Game audio volume (0% to 100%).",
+      "slider": {
+        "key": "Sound/Volume",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "format": "%d"
+      },
+      "defaults": { "Sound/Volume": "100" }
+    }
+  ],
+  "actions": [
+    { "id": "saves", "label": "Saves", "help": "Open folder containing save states and SRAM data.", "open": "saves" },
+    { "id": "logs", "label": "Config and Logs", "help": "Open folder containing game configuration and logs.", "open": "logs" }
+  ]
 }
