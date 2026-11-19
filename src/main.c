@@ -30,6 +30,9 @@
 #include "live_log.h"
 #include "snesrecomp_rom_identity.h"  /* generated from rom_identity.txt */
 
+#include <stdlib.h>
+#include <string.h>
+
 #ifndef __ANDROID__
 #define SDL_MAIN_HANDLED 1
 #endif
@@ -71,5 +74,32 @@ static const SnesDesktopHostGame kGameHost = {
 int main(int argc, char **argv)
 {
     aladdin_live_log_init();
+
+#if defined(SNESRECOMP_SETUP_HOST)
+    /* A setup host contains no recompiled game code and cannot boot straight
+     * into gameplay. If a front-end like RecompLauncher passes a ROM path
+     * via --rom <path> without --launcher, force the launcher so the setup /
+     * rebuild wizard opens cleanly instead of aborting. */
+    int has_launcher_flag = 0;
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--launcher") == 0 || strcmp(argv[i], "--no-launcher") == 0) {
+            has_launcher_flag = 1;
+            break;
+        }
+    }
+    if (!has_launcher_flag) {
+        char **new_argv = (char **)malloc((argc + 2) * sizeof(char *));
+        if (new_argv) {
+            new_argv[0] = argv[0];
+            new_argv[1] = (char *)"--launcher";
+            for (int i = 1; i < argc; ++i) {
+                new_argv[i + 1] = argv[i];
+            }
+            new_argv[argc + 1] = NULL;
+            return snesrecomp_desktop_main(&kGameHost, argc + 1, new_argv);
+        }
+    }
+#endif
+
     return snesrecomp_desktop_main(&kGameHost, argc, argv);
 }
