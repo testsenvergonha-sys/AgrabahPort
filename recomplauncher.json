@@ -36,10 +36,15 @@
         { "path": "{install}/config.ini" }
       ],
       "ensure": {
+        "General/DisableFrameDelay": "1",
         "Graphics/WindowSize": "Auto",
         "Graphics/WindowScale": "3",
         "Graphics/Fullscreen": "0",
         "Graphics/VSync": "1",
+        "Graphics/OutputMethod": "SDL",
+        "Graphics/Renderer": "auto",
+        "Graphics/Widescreen": "0",
+        "Graphics/DisplayAspect": "4:3",
         "Graphics/Shader": "assets/shaders/sharp.glslp",
         "Sound/Volume": "100"
       }

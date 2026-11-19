@@ -29,7 +29,11 @@
 #include "game_rtl.h"
 #include "live_log.h"
 #include "snesrecomp_rom_identity.h"  /* generated from rom_identity.txt */
+#include "desktop/config.h"
+#include "desktop/display_aspect.h"
+#include "snes/ppu.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,6 +50,54 @@
 #define SNES_GAME_VERSION "dev"
 #endif
 
+extern Ppu *g_ppu;
+extern uint8_t g_ram[0x20000];
+
+static void AladdinBeginFrame(unsigned number)
+{
+    (void)number;
+    if (!g_ppu || !g_config.widescreen)
+        return;
+
+    uint8_t health = g_ram[0x0367];
+    uint8_t lives = g_ram[0x0364];
+
+    /* Clamp static screens (Capcom logo, Disney logo, Title screen) to authentic 256
+     * with clean black side borders. Unclamp during active gameplay. */
+    if (health == 0 && lives == 0) {
+        PpuSetWidescreenLayerClamp(g_ppu, 0x0F);
+    } else {
+        PpuSetWidescreenLayerClamp(g_ppu, 0x00);
+    }
+}
+
+static void AladdinPrepareFrame(int dw, int dh, int *w, int *h)
+{
+    (void)dw; (void)dh;
+    if (g_config.widescreen) {
+        *w = SnesDisplayAspect_ComputeWideFrameWidth(256);  /* 342: 16:9 widescreen */
+        *h = 224;
+    } else {
+        *w = 256;  /* authentic 4:3 SNES */
+        *h = 224;
+    }
+}
+
+static int AladdinWindowBaseWidth(int frame_w)
+{
+    if (g_config.widescreen) {
+        return SnesDisplayAspect_ComputeWindowWidth(
+            342, 224, 240, SnesDisplayAspect_Clamp(g_config.display_aspect));
+    }
+    return (frame_w * 5 + 2) / 4;
+}
+
+static const char *const kAladdinAspectLabels[] = {
+    "16:9 Widescreen (Recomendado)",
+    "8:7 Pixels Quadrados",
+    "1:1 Quadro Original",
+};
+
 static const SnesDesktopHostGame kGameHost = {
     .display_name        = "AgrabahPort",
     .window_title        = "AgrabahPort",
@@ -57,9 +109,13 @@ static const SnesDesktopHostGame kGameHost = {
     .build_version       = SNES_GAME_VERSION,
     .game_info           = &kGameInfo,
     .num_players         = 1,
-    .widescreen_supported     = 1,
-    .native_widescreen        = 1,
+    .simulation_hz       = 60.0,
+    .widescreen_supported     = 0,
+    .native_widescreen        = 0,
     .display_aspect_supported = 1,
+    .prepare_frame            = &AladdinPrepareFrame,
+    .begin_sim_frame          = &AladdinBeginFrame,
+    .window_base_width        = &AladdinWindowBaseWidth,
     .shader_supported         = 1,
     .rewind_settings          = 1,
     .in_game_launcher         = 1,
