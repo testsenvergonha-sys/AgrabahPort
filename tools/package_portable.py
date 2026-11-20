@@ -1,19 +1,20 @@
 import os
 import zipfile
 
-dist_dir = r"C:\Users\Samsung\.gemini\antigravity\scratch\snes-port\AladdinSNESRecomp\dist"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.abspath(os.path.join(script_dir, ".."))
+dist_dir = os.path.join(project_dir, "dist")
 os.makedirs(dist_dir, exist_ok=True)
 zip_path = os.path.join(dist_dir, "agrabahport-0.1.3-windows-x64-portable.zip")
 if os.path.exists(zip_path):
     os.remove(zip_path)
 
-build_dir = r"C:\Users\Samsung\.gemini\antigravity\scratch\snes-port\AladdinSNESRecomp\build"
-project_dir = r"C:\Users\Samsung\.gemini\antigravity\scratch\snes-port\AladdinSNESRecomp"
+build_dir = os.path.join(project_dir, "build")
 prefix = "agrabahport-0.1.3-windows-x64-portable"
 
 config_content = """[General]
 Autosave = 0
-DisableFrameDelay = 1
+DisableFrameDelay = 0
 SkipLauncher = 0
 RunAhead = 0
 DisplayPerfInTitle = 1
@@ -29,7 +30,7 @@ Mode7Enabled = 0
 Mode7Scale = 8
 Mode7Supersample = 1
 DisplayAspect = 4:3
-OutputMethod = SDL
+OutputMethod = OpenGL
 LinearFiltering = 0
 Shader = 
 Widescreen = 0
