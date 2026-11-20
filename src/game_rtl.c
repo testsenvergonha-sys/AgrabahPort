@@ -33,16 +33,19 @@
  */
 
 #include "game_rtl.h"
+#include "aladdin_coop.h"
 
 #include "beam_frame_driver.h"
 
 void GameRunOneFrame(void)
 {
     snes_beam_frame_driver_run_frame();
+    AladdinCoop_PostFrame();
 }
 
 void GameDrawPpuFrame(void)
 {
+    AladdinCoop_PrepareDraw();
     snes_beam_frame_driver_draw_ppu_frame();
 }
 
@@ -53,6 +56,7 @@ void GameSessionReset(void)
      * been fine" is the usual desync culprit, because single-player never
      * re-enters the boot path twice in one process. */
     snes_beam_frame_driver_reset();
+    AladdinCoop_Reset();
 }
 
 const RtlGameInfo kGameInfo = {

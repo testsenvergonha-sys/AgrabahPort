@@ -27,6 +27,7 @@
 
 #include "host_main.h"
 #include "game_rtl.h"
+#include "aladdin_coop.h"
 #include "live_log.h"
 #include "snesrecomp_rom_identity.h"  /* generated from rom_identity.txt */
 #include "desktop/config.h"
@@ -67,6 +68,11 @@ static void AladdinBeginFrame(unsigned number)
     if (health == 0 && lives == 0) {
         PpuSetWidescreenLayerClamp(g_ppu, 0x0F);
     } else {
+        /* In gameplay, anchor HUD (top 32 scanlines) to authentic 4:3 area
+         * while allowing background layers and sprites to expand into widescreen */
+        PpuSetWidescreenHudSplit(g_ppu, 32, 0, 255);
+        PpuSetWidescreenHudAlwaysVisible(g_ppu, true);
+        PpuSetWidescreenViewAnchor(g_ppu, true);
         PpuSetWidescreenLayerClamp(g_ppu, 0x00);
     }
 }
@@ -108,9 +114,9 @@ static const SnesDesktopHostGame kGameHost = {
     .game_id             = SNESRECOMP_ROM_GAME_ID,
     .build_version       = SNES_GAME_VERSION,
     .game_info           = &kGameInfo,
-    .num_players         = 1,
+    .num_players         = 2,
     .simulation_hz       = 60.0,
-    .widescreen_supported     = 0,
+    .widescreen_supported     = 1,
     .native_widescreen        = 0,
     .display_aspect_supported = 1,
     .prepare_frame            = &AladdinPrepareFrame,

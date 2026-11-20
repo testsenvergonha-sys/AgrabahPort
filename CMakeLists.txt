@@ -39,6 +39,7 @@ include(${SNESRECOMP_ROOT}/runner/runner.cmake)
 add_executable(AladdinSNESRecomp
     ${SNESRECOMP_RUNNER_SOURCES}
     src/main.c
+    src/aladdin_coop.c
     src/live_log.c
     src/host_contract.c
     src/game_rtl.c
