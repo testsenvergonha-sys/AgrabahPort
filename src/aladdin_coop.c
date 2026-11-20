@@ -145,6 +145,56 @@ static void SuppressAbu(void)
     }
 }
 
+/* Stage collision: read collision attribute for a world position */
+static uint8_t Aladdin_GetTileAttr(int world_x, int world_y)
+{
+    if (world_x < 0 || world_y < 0 || world_y >= 1024 || world_x >= 4096)
+        return 0;
+
+    int x_high = (world_x >> 8) & 0xFF;
+    int x_part = (((x_high + 1) * 2) & 0x3E);
+    int y_part = ((((world_y & 0xFFF0) >> 8) + 1) << 6) & 0x03C0;
+    int block_idx = y_part | x_part;
+
+    if (0x1F000 + block_idx + 1 >= 0x20000)
+        return 0;
+
+    uint16_t block_base = *(uint16_t*)&g_ram[0x1F000 + block_idx];
+    int sub_x = (world_x >> 3) & 0x1E;
+    int sub_y = (world_y << 1) & 0x01E0;
+    int tile_offset = sub_y | sub_x;
+
+    uint16_t full_tile_idx = (block_base + tile_offset) & 0xFFFF;
+    if (0x10000 + full_tile_idx + 1 >= 0x20000)
+        return 0;
+
+    uint16_t tile_id = *(uint16_t*)&g_ram[0x10000 + full_tile_idx];
+    uint16_t coll_idx = tile_id >> 3;
+    if (coll_idx < 0x3800) {
+        return g_ram[0xC800 + coll_idx];
+    }
+    return 0;
+}
+
+/* Check if a world point contains solid obstacles (walls, platforms, melon carts, canopies) */
+static int Aladdin_IsSolidAt(int world_x, int world_y)
+{
+    uint8_t attr = Aladdin_GetTileAttr(world_x, world_y);
+    return (attr != 0);
+}
+
+/* Find floor surface below world (x, y) */
+static int Aladdin_FindFloorBelow(int world_x, int world_y, int max_fall)
+{
+    for (int y = world_y; y <= world_y + max_fall; y += 4) {
+        uint8_t attr = Aladdin_GetTileAttr(world_x, y + 16);
+        if (attr != 0) {
+            return ((y + 16) & ~15) - 16;
+        }
+    }
+    return 432; /* Default ground fallback for stage 1 */
+}
+
 /* Find Player 1 center X, feet Y, and sprite pieces */
 static int FindPlayer1Pieces(int16_t *out_center_x, int16_t *out_feet_y, int *out_slots, int max_slots)
 {
@@ -180,17 +230,23 @@ static int FindPlayer1Pieces(int16_t *out_center_x, int16_t *out_feet_y, int *ou
 }
 
 /* Update Player 2 motion, physics, and input */
-static void UpdatePlayer2(int16_t p1_center_x, int16_t p1_feet_y)
+static void UpdatePlayer2(int16_t p1_screen_center_x, int16_t p1_screen_feet_y)
 {
     /* Read Gamepad 2 */
     uint16_t pad = RtlGetPadState(1);
 
-    /* Initialize spawn position near Player 1 */
-    if (!s_p2.spawned) {
-        s_p2.screen_x = p1_center_x + 36;
-        if (s_p2.screen_x > 220) s_p2.screen_x = p1_center_x - 36;
-        if (s_p2.screen_x < 24)  s_p2.screen_x = 48;
-        s_p2.screen_y = p1_feet_y;
+    /* Read Aladdin 1 world coordinates & camera from WRAM */
+    uint16_t p1_world_x = *(uint16_t*)&g_ram[0x08E7];
+    uint16_t p1_world_y = *(uint16_t*)&g_ram[0x08EA];
+    uint16_t cam_x = *(uint16_t*)&g_ram[0x19ED];
+    uint16_t cam_y = *(uint16_t*)&g_ram[0x19F1];
+
+    /* Initialize spawn position in world coordinates near Player 1 */
+    if (!s_p2.spawned && p1_world_y > 50) {
+        s_p2.world_x = p1_world_x + 36;
+        s_p2.world_y = p1_world_y;
+        s_p2.screen_x = s_p2.world_x - cam_x;
+        s_p2.screen_y = s_p2.world_y - cam_y;
         s_p2.spawned = 1;
         s_p2.grounded = 1;
     }
@@ -200,18 +256,34 @@ static void UpdatePlayer2(int16_t p1_center_x, int16_t p1_feet_y)
     if (s_p2.attack_timer > 0) s_p2.attack_timer--;
 
     /* Horizontal Movement */
+    int speed = (pad & 0x0202) ? 3 : 2; /* Hold Y / X to dash/run */
     s_p2.vx = 0;
     if (pad & 0x0040) { /* D-Pad Left */
-        s_p2.vx = -2;
+        s_p2.vx = -speed;
         s_p2.facing = 1;
     } else if (pad & 0x0080) { /* D-Pad Right */
-        s_p2.vx = 2;
+        s_p2.vx = speed;
         s_p2.facing = 0;
     }
 
+    /* Horizontal obstacle & wall collision */
+    if (s_p2.vx > 0) {
+        if (Aladdin_IsSolidAt(s_p2.world_x + 10, s_p2.world_y - 12) ||
+            Aladdin_IsSolidAt(s_p2.world_x + 10, s_p2.world_y - 24)) {
+            s_p2.vx = 0;
+        }
+    } else if (s_p2.vx < 0) {
+        if (Aladdin_IsSolidAt(s_p2.world_x - 10, s_p2.world_y - 12) ||
+            Aladdin_IsSolidAt(s_p2.world_x - 10, s_p2.world_y - 24)) {
+            s_p2.vx = 0;
+        }
+    }
+    s_p2.world_x += s_p2.vx;
+
     /* Jump (Button B = 0x0001 or Button A = 0x0100) */
-    if ((pad & 0x0101) && s_p2.grounded) {
-        s_p2.vy = -7;
+    bool jump_held = (pad & 0x0101) != 0;
+    if (jump_held && s_p2.grounded) {
+        s_p2.vy = -10; /* Full, satisfying SNES jump! Easily reaches canopies and melon carts */
         s_p2.grounded = 0;
         s_p2.state = 2; /* Jump */
     }
@@ -229,7 +301,7 @@ static void UpdatePlayer2(int16_t p1_center_x, int16_t p1_feet_y)
         if (s_p2.vx != 0) {
             s_p2.state = 1; /* Run */
             s_p2.anim_timer++;
-            if (s_p2.anim_timer >= 6) {
+            if (s_p2.anim_timer >= 5) {
                 s_p2.anim_timer = 0;
                 s_p2.anim_frame = (s_p2.anim_frame + 1) % 4;
             }
@@ -241,33 +313,144 @@ static void UpdatePlayer2(int16_t p1_center_x, int16_t p1_feet_y)
 
     /* Apply Gravity & Vertical Motion */
     if (!s_p2.grounded) {
-        s_p2.vy += 1;
+        /* Variable jump height: holding jump gives higher, floatier arc */
+        static int s_grav_sub = 0;
+        if (jump_held && s_p2.vy < 0) {
+            s_grav_sub++;
+            if (s_grav_sub & 1) s_p2.vy += 1;
+        } else {
+            s_p2.vy += 1;
+        }
         if (s_p2.vy > 7) s_p2.vy = 7;
-        s_p2.screen_y += s_p2.vy;
 
-        /* Floor collision against P1 ground level */
-        if (s_p2.screen_y >= p1_feet_y) {
-            s_p2.screen_y = p1_feet_y;
+        s_p2.world_y += s_p2.vy;
+
+        /* Ceiling collision */
+        if (s_p2.vy < 0 && Aladdin_IsSolidAt(s_p2.world_x, s_p2.world_y - 32)) {
             s_p2.vy = 0;
-            s_p2.grounded = 1;
-            s_p2.state = (s_p2.vx != 0) ? 1 : 0;
+        }
+
+        /* Floor collision when descending */
+        if (s_p2.vy >= 0) {
+            int floor_y = Aladdin_FindFloorBelow(s_p2.world_x, s_p2.world_y - 8, 20);
+            if (s_p2.world_y >= floor_y) {
+                s_p2.world_y = floor_y;
+                s_p2.vy = 0;
+                s_p2.grounded = 1;
+                s_p2.state = (s_p2.vx != 0) ? 1 : 0;
+            }
         }
     } else {
-        /* Gently track ground height if close to P1 */
-        if (p1_feet_y > 32 && p1_feet_y < 224) {
-            int diff = p1_feet_y - s_p2.screen_y;
-            if (diff > -24 && diff < 24) {
-                s_p2.screen_y = p1_feet_y;
-            }
+        /* Ground tracking when walking: follow slopes/steps or detect ledge drops */
+        int floor_y = Aladdin_FindFloorBelow(s_p2.world_x, s_p2.world_y - 6, 24);
+        int diff = floor_y - s_p2.world_y;
+        if (diff >= -8 && diff <= 8) {
+            s_p2.world_y = floor_y;
+        } else if (diff > 8) {
+            /* Walked off ledge */
+            s_p2.grounded = 0;
+            s_p2.vy = 0;
         }
     }
 
-    /* Apply Horizontal Position */
-    s_p2.screen_x += s_p2.vx;
+    /* Calculate screen coordinates from camera */
+    s_p2.screen_x = s_p2.world_x - cam_x;
+    s_p2.screen_y = s_p2.world_y - cam_y;
 
-    /* Screen clamp (keep on screen) */
-    if (s_p2.screen_x < 16)  s_p2.screen_x = 16;
-    if (s_p2.screen_x > 238) s_p2.screen_x = 238;
+    /* Keep Player 2 inside the playable screen viewport */
+    if (s_p2.screen_x < 12) {
+        s_p2.screen_x = 12;
+        s_p2.world_x = cam_x + 12;
+    }
+    if (s_p2.screen_x > 240) {
+        s_p2.screen_x = 240;
+        s_p2.world_x = cam_x + 240;
+    }
+}
+
+typedef struct {
+    int8_t  rel_x;
+    int8_t  rel_y;
+    uint8_t tile;
+    uint8_t attr;
+    uint8_t size; /* 0 = 8x8, 1 = 16x16 */
+} AladdinSpriteDef;
+
+static const AladdinSpriteDef kAladdinIdleSprites[7] = {
+    {  13, -32, 0x09, 0x20, 0 },
+    { -12,  -8, 0x08, 0x20, 0 },
+    {  12, -15, 0x07, 0x20, 0 },
+    {   5, -40, 0x06, 0x20, 0 },
+    {  -4,   0, 0x04, 0x20, 1 },
+    {  -4, -16, 0x02, 0x20, 1 },
+    {  -3, -32, 0x00, 0x20, 1 },
+};
+
+static const AladdinSpriteDef kAladdinJumpSprites[10] = {
+    { -12,   0, 0x0C, 0x20, 0 },
+    {   4, -16, 0x0B, 0x20, 0 },
+    {  12, -24, 0x0A, 0x20, 0 },
+    {  12, -32, 0x09, 0x20, 0 },
+    {  -2, -40, 0x08, 0x20, 0 },
+    { -10, -40, 0x07, 0x20, 0 },
+    {  -2, -48, 0x06, 0x20, 0 },
+    { -12, -16, 0x04, 0x20, 1 },
+    {  -4, -32, 0x02, 0x20, 1 },
+    {   6, -48, 0x00, 0x20, 1 },
+};
+
+static void EmitPlayer2FromTable(const AladdinSpriteDef *table, int count)
+{
+    int p2_slot = 80;
+    for (int k = 0; k < count && p2_slot < 93; ++k) {
+        int16_t offset_x = table[k].rel_x;
+        int16_t offset_y = table[k].rel_y;
+        uint8_t tile = table[k].tile;
+        uint8_t attr = table[k].attr;
+        uint8_t size = table[k].size;
+
+        if (s_p2.facing != 0) {
+            /* Facing left */
+            offset_x = -offset_x - (size ? 16 : 8);
+            attr ^= 0x40;
+        }
+
+        int16_t p2_x = s_p2.screen_x + offset_x;
+        int16_t p2_y = s_p2.screen_y + offset_y;
+
+        if (p2_x < 0) p2_x = 0;
+        if (p2_x > 255) p2_x = 255;
+        if (p2_y < 0) p2_y = 0;
+        if (p2_y > 224) p2_y = 224;
+
+        /* Palette 5 (Prince Ali), Priority 3 */
+        attr = (attr & ~0x0E) | (5 << 1);
+        attr = (attr & ~0x30) | (3 << 4);
+
+        g_ram[0xFA80 + p2_slot * 4 + 0] = (uint8_t)p2_x;
+        g_ram[0xFA80 + p2_slot * 4 + 1] = (uint8_t)p2_y;
+        g_ram[0xFA80 + p2_slot * 4 + 2] = tile;
+        g_ram[0xFA80 + p2_slot * 4 + 3] = attr;
+
+        int high_byte_idx = p2_slot / 4;
+        int high_bit_shift = (p2_slot % 4) * 2;
+        uint8_t val = (size << 1);
+
+        g_ram[0xFC80 + high_byte_idx] &= ~(0x03 << high_bit_shift);
+        g_ram[0xFC80 + high_byte_idx] |= (val << high_bit_shift);
+
+        if (g_ppu) {
+            g_ppu->oam[p2_slot * 2 + 0] = (uint16_t)((uint8_t)p2_x | ((uint8_t)p2_y << 8));
+            g_ppu->oam[p2_slot * 2 + 1] = (uint16_t)(tile | (attr << 8));
+            g_ppu->highOam[high_byte_idx] = g_ram[0xFC80 + high_byte_idx];
+        }
+        p2_slot++;
+    }
+
+    for (; p2_slot < 93; ++p2_slot) {
+        g_ram[0xFA80 + p2_slot * 4 + 1] = 225;
+        if (g_ppu) g_ppu->oam[p2_slot * 2] = (225 << 8);
+    }
 }
 
 /* Emit Player 2 sprites into OAM slots 80..92 */
@@ -280,6 +463,16 @@ static void EmitPlayer2Sprites(int16_t p1_center_x, int16_t p1_feet_y, const int
             g_ram[0xFA80 + slot * 4 + 1] = 225;
             if (g_ppu) g_ppu->oam[slot * 2] = (225 << 8);
         }
+        return;
+    }
+
+    /* Decoupled Pose: if states differ, use independent sprite tables */
+    if (s_p2.state == 0 && p1_count != 7) {
+        EmitPlayer2FromTable(kAladdinIdleSprites, 7);
+        return;
+    }
+    if (s_p2.state == 2 && p1_count != 10) {
+        EmitPlayer2FromTable(kAladdinJumpSprites, 10);
         return;
     }
 
