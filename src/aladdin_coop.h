@@ -26,6 +26,7 @@ typedef struct {
     uint8_t  invuln_timer;     /* damage flash timer */
     uint8_t  grounded;         /* 1 if on solid ground */
     uint8_t  spawned;          /* 1 once placed in level */
+    uint16_t last_pad;         /* previous frame input for edge triggers */
 } AladdinGuestPlayer;
 
 /* Initialize / reset co-op system */

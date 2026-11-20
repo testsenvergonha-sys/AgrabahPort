@@ -229,6 +229,95 @@ static int FindPlayer1Pieces(int16_t *out_center_x, int16_t *out_feet_y, int *ou
     return count;
 }
 
+/* Check dynamic actor collisions: swinging wooden beams and enemies */
+static void CheckActorCollisions(void)
+{
+    static int s_beam_slot = -1;
+    static int s_beam_last_x = 0;
+
+    uint16_t cam_y = *(uint16_t*)&g_ram[0x19F1];
+    int on_beam_this_frame = 0;
+
+    /* Scan OAM slots 16..79 where SNES Aladdin renders enemies and platforms */
+    for (int i = 16; i < 80; ++i) {
+        uint8_t spr_y = g_ram[0xFA80 + i * 4 + 1];
+        if (spr_y >= 224) continue;
+
+        uint8_t spr_x = g_ram[0xFA80 + i * 4 + 0];
+        uint8_t spr_attr = g_ram[0xFA80 + i * 4 + 3];
+        uint8_t pal = (spr_attr >> 1) & 7;
+
+        int high_byte = i / 4;
+        int shift = (i % 4) * 2;
+        int size = (g_ram[0xFC80 + high_byte] >> (shift + 1)) & 1;
+        int spr_w = size ? 16 : 8;
+
+        /* Palette 4 or 3: Stage objects, swinging platforms, enemies */
+        if (pal == 4 || pal == 3) {
+            /* 1. Dynamic Platform / Swinging Wooden Beam Detection */
+            if (spr_y < 190 && spr_y > 30) {
+                int dx = s_p2.screen_x - spr_x;
+                int dy = s_p2.screen_y - spr_y;
+                /* If P2's feet are horizontally aligned with the beam and landing onto it */
+                if (dx >= -16 && dx <= 32 && dy >= -12 && dy <= 8 && s_p2.vy >= 0) {
+                    s_p2.screen_y = spr_y;
+                    s_p2.world_y = spr_y + cam_y;
+                    s_p2.vy = 0;
+                    s_p2.grounded = 1;
+                    if (s_p2.state != 3) {
+                        s_p2.state = (s_p2.vx != 0) ? 1 : 0;
+                    }
+                    on_beam_this_frame = 1;
+
+                    /* If continuing on same beam, carry horizontal swing motion */
+                    if (s_beam_slot == i) {
+                        int swing_dx = (int)spr_x - s_beam_last_x;
+                        if (abs(swing_dx) < 10) {
+                            s_p2.world_x += swing_dx;
+                        }
+                    }
+                    s_beam_slot = i;
+                    s_beam_last_x = spr_x;
+                }
+            }
+
+            /* 2. Enemy Interaction */
+            if (spr_y >= 100 && spr_y <= 216 && !on_beam_this_frame) {
+                int edx = s_p2.screen_x - spr_x;
+                int edy = s_p2.screen_y - spr_y;
+
+                /* P2 attacks with sword */
+                if (s_p2.state == 3 && s_p2.attack_timer > 2) {
+                    if (abs(edx) < 32 && abs(edy) < 26) {
+                        /* Enemy hit: defeat enemy by moving off screen */
+                        g_ram[0xFA80 + i * 4 + 1] = 225;
+                        if (g_ppu) g_ppu->oam[i * 2] = (225 << 8);
+                    }
+                }
+                /* P2 jumps on top of enemy */
+                else if (!s_p2.grounded && s_p2.vy > 0 && abs(edx) < 20 && edy >= -18 && edy <= -2) {
+                    /* Bounce high off enemy! */
+                    s_p2.vy = -8;
+                    /* Defeat enemy */
+                    g_ram[0xFA80 + i * 4 + 1] = 225;
+                    if (g_ppu) g_ppu->oam[i * 2] = (225 << 8);
+                }
+                /* Enemy touches P2 while vulnerable */
+                else if (s_p2.invuln_timer == 0 && abs(edx) < 16 && abs(edy) < 18) {
+                    if (s_p2.health > 0) s_p2.health--;
+                    s_p2.invuln_timer = 60; /* 1 sec invulnerability flash */
+                    s_p2.vy = -4;           /* Recoil bounce */
+                    s_p2.vx = s_p2.facing ? 2 : -2;
+                }
+            }
+        }
+    }
+
+    if (!on_beam_this_frame && s_p2.grounded) {
+        s_beam_slot = -1;
+    }
+}
+
 /* Update Player 2 motion, physics, and input */
 static void UpdatePlayer2(int16_t p1_screen_center_x, int16_t p1_screen_feet_y)
 {
@@ -249,11 +338,17 @@ static void UpdatePlayer2(int16_t p1_screen_center_x, int16_t p1_screen_feet_y)
         s_p2.screen_y = s_p2.world_y - cam_y;
         s_p2.spawned = 1;
         s_p2.grounded = 1;
+        s_p2.health = 3;
     }
 
     /* Timers */
     if (s_p2.invuln_timer > 0) s_p2.invuln_timer--;
-    if (s_p2.attack_timer > 0) s_p2.attack_timer--;
+    if (s_p2.attack_timer > 0) {
+        s_p2.attack_timer--;
+        if (s_p2.attack_timer == 0 && s_p2.state == 3) {
+            s_p2.state = (s_p2.vx != 0) ? 1 : 0;
+        }
+    }
 
     /* Horizontal Movement */
     int speed = (pad & 0x0202) ? 3 : 2; /* Hold Y / X to dash/run */
@@ -264,6 +359,14 @@ static void UpdatePlayer2(int16_t p1_screen_center_x, int16_t p1_screen_feet_y)
     } else if (pad & 0x0080) { /* D-Pad Right */
         s_p2.vx = speed;
         s_p2.facing = 0;
+    }
+
+    /* Animation timer & state */
+    if (s_p2.vx != 0 && s_p2.grounded) {
+        s_p2.anim_timer++;
+        if (s_p2.state != 3) s_p2.state = 1; /* Run */
+    } else if (s_p2.grounded && s_p2.state != 3 && s_p2.state != 4) {
+        s_p2.state = 0; /* Idle */
     }
 
     /* Horizontal obstacle & wall collision */
@@ -280,43 +383,36 @@ static void UpdatePlayer2(int16_t p1_screen_center_x, int16_t p1_screen_feet_y)
     }
     s_p2.world_x += s_p2.vx;
 
-    /* Jump (Button B = 0x0001 or Button A = 0x0100) */
+    /* Jump (Button B = 0x0001 or Button A = 0x0100) - Edge triggered! */
     bool jump_held = (pad & 0x0101) != 0;
-    if (jump_held && s_p2.grounded) {
-        s_p2.vy = -10; /* Full, satisfying SNES jump! Easily reaches canopies and melon carts */
+    bool jump_edge = jump_held && ((s_p2.last_pad & 0x0101) == 0);
+    if (jump_edge && s_p2.grounded) {
+        s_p2.vy = -10; /* Full, satisfying SNES jump! */
         s_p2.grounded = 0;
         s_p2.state = 2; /* Jump */
     }
 
-    /* Sword Attack (Button Y = 0x0002 or Button X = 0x0200) */
-    if ((pad & 0x0202) && s_p2.attack_timer == 0) {
+    /* Sword Attack (Button Y = 0x0002 or Button X = 0x0200) - Edge triggered! */
+    bool atk_held = (pad & 0x0202) != 0;
+    bool atk_edge = atk_held && ((s_p2.last_pad & 0x0202) == 0);
+    if (atk_edge && s_p2.attack_timer == 0) {
         s_p2.attack_timer = 16;
         s_p2.state = 3; /* Slash */
     }
 
     /* Crouch (D-Pad Down = 0x0020) */
-    if ((pad & 0x0020) && s_p2.grounded && s_p2.vx == 0) {
+    if ((pad & 0x0020) && s_p2.grounded && s_p2.vx == 0 && s_p2.state != 3) {
         s_p2.state = 4; /* Crouch */
-    } else if (s_p2.grounded && s_p2.attack_timer == 0) {
-        if (s_p2.vx != 0) {
-            s_p2.state = 1; /* Run */
-            s_p2.anim_timer++;
-            if (s_p2.anim_timer >= 5) {
-                s_p2.anim_timer = 0;
-                s_p2.anim_frame = (s_p2.anim_frame + 1) % 4;
-            }
-        } else {
-            s_p2.state = 0; /* Idle */
-            s_p2.anim_frame = 0;
-        }
     }
 
     /* Apply Gravity & Vertical Motion */
     if (!s_p2.grounded) {
-        /* Variable jump height: holding jump gives higher, floatier arc */
+        if (!jump_held && s_p2.vy < -3) {
+            s_p2.vy = -3; /* Variable jump cut on early release */
+        }
         static int s_grav_sub = 0;
-        if (jump_held && s_p2.vy < 0) {
-            s_grav_sub++;
+        s_grav_sub++;
+        if (s_p2.vy < 0) {
             if (s_grav_sub & 1) s_p2.vy += 1;
         } else {
             s_p2.vy += 1;
@@ -352,6 +448,12 @@ static void UpdatePlayer2(int16_t p1_screen_center_x, int16_t p1_screen_feet_y)
             s_p2.vy = 0;
         }
     }
+
+    /* Check dynamic platform & enemy collisions */
+    CheckActorCollisions();
+
+    /* Save last pad for edge detection */
+    s_p2.last_pad = pad;
 
     /* Calculate screen coordinates from camera */
     s_p2.screen_x = s_p2.world_x - cam_x;
@@ -397,6 +499,50 @@ static const AladdinSpriteDef kAladdinJumpSprites[10] = {
     { -12, -16, 0x04, 0x20, 1 },
     {  -4, -32, 0x02, 0x20, 1 },
     {   6, -48, 0x00, 0x20, 1 },
+};
+
+static const AladdinSpriteDef kAladdinRunSprites1[9] = {
+    {   8, -29, 0x0B, 0x20, 0 },
+    {   0, -29, 0x0A, 0x20, 0 },
+    {   0, -45, 0x06, 0x20, 1 },
+    {  -8,   0, 0x0F, 0x20, 0 },
+    {  -8,  -8, 0x0E, 0x20, 0 },
+    {  -8, -23, 0x0D, 0x20, 0 },
+    {  -8, -31, 0x0C, 0x20, 0 },
+    {   0,  -5, 0x04, 0x20, 1 },
+    {   0, -21, 0x02, 0x20, 1 },
+};
+
+static const AladdinSpriteDef kAladdinRunSprites2[7] = {
+    {  -7, -16, 0x04, 0x20, 1 },
+    {   1, -32, 0x02, 0x20, 1 },
+    {   1, -48, 0x00, 0x20, 1 },
+    {  -9,   0, 0x09, 0x20, 0 },
+    {   9, -16, 0x08, 0x20, 0 },
+    {  -7, -24, 0x07, 0x20, 0 },
+    {  -7, -32, 0x06, 0x20, 0 },
+};
+
+static const AladdinSpriteDef kAladdinAttackSprites[10] = {
+    {   6, -56, 0x0C, 0x20, 0 },
+    {  -4, -16, 0x04, 0x20, 1 },
+    {  -4, -32, 0x02, 0x20, 1 },
+    {  -2, -48, 0x00, 0x20, 1 },
+    { -12,   0, 0x0B, 0x20, 0 },
+    { -12,  -8, 0x0A, 0x20, 0 },
+    { -12, -16, 0x09, 0x20, 0 },
+    {  12, -32, 0x08, 0x20, 0 },
+    { -12, -32, 0x07, 0x20, 0 },
+    { -10, -40, 0x06, 0x20, 0 },
+};
+
+static const AladdinSpriteDef kAladdinCrouchSprites[6] = {
+    {  -4,   0, 0x04, 0x20, 1 },
+    {  -4, -12, 0x02, 0x20, 1 },
+    {  -3, -24, 0x00, 0x20, 1 },
+    {  13, -24, 0x09, 0x20, 0 },
+    { -12,  -4, 0x08, 0x20, 0 },
+    {   5, -30, 0x06, 0x20, 0 },
 };
 
 static void EmitPlayer2FromTable(const AladdinSpriteDef *table, int count)
@@ -457,7 +603,7 @@ static void EmitPlayer2FromTable(const AladdinSpriteDef *table, int count)
 static void EmitPlayer2Sprites(int16_t p1_center_x, int16_t p1_feet_y, const int *p1_slots, int p1_count)
 {
     /* Blink if invulnerable */
-    if (s_p2.invuln_timer > 0 && (s_p2.invuln_timer & 2)) {
+    if (s_p2.invuln_timer > 0 && (s_p2.invuln_timer & 4) == 0) {
         for (int i = 0; i < 14; ++i) {
             int slot = 80 + i;
             g_ram[0xFA80 + slot * 4 + 1] = 225;
@@ -466,90 +612,34 @@ static void EmitPlayer2Sprites(int16_t p1_center_x, int16_t p1_feet_y, const int
         return;
     }
 
-    /* Decoupled Pose: if states differ, use independent sprite tables */
-    if (s_p2.state == 0 && p1_count != 7) {
-        EmitPlayer2FromTable(kAladdinIdleSprites, 7);
+    /* Completely decoupled independent Aladdin 2 animations */
+    if (s_p2.state == 1) {
+        /* Run: alternate two running cycle frames every 8 ticks */
+        if ((s_p2.anim_timer >> 3) & 1) {
+            EmitPlayer2FromTable(kAladdinRunSprites2, 7);
+        } else {
+            EmitPlayer2FromTable(kAladdinRunSprites1, 9);
+        }
         return;
     }
-    if (s_p2.state == 2 && p1_count != 10) {
+    if (s_p2.state == 2) {
+        /* Jump */
         EmitPlayer2FromTable(kAladdinJumpSprites, 10);
         return;
     }
-
-    int p2_slot = 80;
-
-    for (int k = 0; k < p1_count && p2_slot < 93; ++k) {
-        int src = p1_slots[k];
-        uint8_t src_x    = g_ram[0xFA80 + src * 4 + 0];
-        uint8_t src_y    = g_ram[0xFA80 + src * 4 + 1];
-        uint8_t src_tile = g_ram[0xFA80 + src * 4 + 2];
-        uint8_t src_attr = g_ram[0xFA80 + src * 4 + 3];
-
-        int16_t offset_x = (int16_t)src_x - p1_center_x;
-        int16_t offset_y = (int16_t)src_y - p1_feet_y;
-
-        uint8_t p1_hflip = (src_attr & 0x40) != 0;
-        uint8_t p2_attr = src_attr;
-
-        if (s_p2.facing != 0) {
-            /* Facing left */
-            if (!p1_hflip) {
-                offset_x = -offset_x - 16;
-                p2_attr ^= 0x40;
-            }
-        } else {
-            /* Facing right */
-            if (p1_hflip) {
-                offset_x = -offset_x - 16;
-                p2_attr ^= 0x40;
-            }
-        }
-
-        int16_t p2_x = s_p2.screen_x + offset_x;
-        int16_t p2_y = s_p2.screen_y + offset_y;
-
-        /* Clamp */
-        if (p2_x < 0) p2_x = 0;
-        if (p2_x > 255) p2_x = 255;
-        if (p2_y < 0) p2_y = 0;
-        if (p2_y > 224) p2_y = 224;
-
-        /* Palette 5 (Prince Ali royal blue/gold) */
-        p2_attr = (p2_attr & ~0x0E) | (5 << 1);
-        /* Priority 3 (above background) */
-        p2_attr = (p2_attr & ~0x30) | (3 << 4);
-
-        /* Write to WRAM low OAM */
-        g_ram[0xFA80 + p2_slot * 4 + 0] = (uint8_t)p2_x;
-        g_ram[0xFA80 + p2_slot * 4 + 1] = (uint8_t)p2_y;
-        g_ram[0xFA80 + p2_slot * 4 + 2] = src_tile;
-        g_ram[0xFA80 + p2_slot * 4 + 3] = p2_attr;
-
-        /* Update high OAM (size bit and high X bit) */
-        int high_byte_idx = p2_slot / 4;
-        int high_bit_shift = (p2_slot % 4) * 2;
-        int src_high_byte = src / 4;
-        int src_high_shift = (src % 4) * 2;
-        uint8_t src_high_val = (g_ram[0xFC80 + src_high_byte] >> src_high_shift) & 0x03;
-
-        g_ram[0xFC80 + high_byte_idx] &= ~(0x03 << high_bit_shift);
-        g_ram[0xFC80 + high_byte_idx] |= (src_high_val << high_bit_shift);
-
-        /* Mirror directly to PPU OAM */
-        if (g_ppu) {
-            g_ppu->oam[p2_slot * 2 + 0] = (uint16_t)((uint8_t)p2_x | ((uint8_t)p2_y << 8));
-            g_ppu->oam[p2_slot * 2 + 1] = (uint16_t)(src_tile | (p2_attr << 8));
-            g_ppu->highOam[high_byte_idx] = g_ram[0xFC80 + high_byte_idx];
-        }
-
-        p2_slot++;
+    if (s_p2.state == 3) {
+        /* Attack / Sword Slash */
+        EmitPlayer2FromTable(kAladdinAttackSprites, 10);
+        return;
+    }
+    if (s_p2.state == 4) {
+        /* Crouch */
+        EmitPlayer2FromTable(kAladdinCrouchSprites, 6);
+        return;
     }
 
-    /* Clear any remaining allocated slots */
-    for (; p2_slot < 93; ++p2_slot) {
-        g_ram[0xFA80 + p2_slot * 4 + 1] = 225;
-        if (g_ppu) g_ppu->oam[p2_slot * 2] = (225 << 8);
-    }
+    /* State 0: Idle */
+    EmitPlayer2FromTable(kAladdinIdleSprites, 7);
 }
 
 /* Draw Player 2 HUD (Hearts on top-right of screen) */
