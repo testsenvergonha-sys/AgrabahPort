@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="assets/icon_source.png" alt="AgrabahPort" width="160">
 </p>
 
@@ -26,119 +26,123 @@
 
 ---
 
-## 🌟 About the Game
+## Overview
 
-**AgrabahPort** is an unofficial native PC port of the classic **Disney's Aladdin** (Super Nintendo / SNES, 1993 — developed by Capcom). 
+**AgrabahPort** is an open-source native PC port of Capcom's *Disney's Aladdin* (Super Nintendo, 1993), built using ahead-of-time (AOT) static recompilation. Rather than running through a hardware emulator, the original 65816 assembly instructions and SPC700 audio subroutines are translated directly into portable C code and compiled as a standalone desktop binary.
 
-Unlike traditional emulators, AgrabahPort translates the original SNES processor instructions ahead-of-time directly into native C code. The result is a true standalone PC game running directly on your operating system with **flawless 60 FPS**, instantaneous input response, native controller support, modern display scaling, CRT shaders, and save-state capabilities.
+The result is true native execution on modern systems with deterministic 60.0 FPS frame pacing, sub-millisecond input response, authentic CRT simulation shaders, and native modern gamepad support. AgrabahPort also introduces an authentic 2-Player Cooperative mode featuring Prince Ali as a fully playable second character with decoupled physics, independent apple ammo, and separate controls.
 
-> ⚖️ **Bring Your Own ROM:** This project does **not** include copyrighted ROM files, game music, or Disney/Capcom graphics. You provide your own legal copy of the original Super Nintendo cartridge dump.
-
----
-
-## ⚡ Quick Start: How to Play in 3 Steps
-
-1. **Download:** Grab the latest release `.zip` for your system from the [Releases](https://github.com/testsenvergonha-sys/AgrabahPort/releases) page (or install directly via [RecompLauncher](https://recomplauncher.com)).
-2. **Place your ROM:** Extract the zip into any folder and place your legal SNES ROM (`Aladdin.sfc` or `Aladdin.smc`) in the same folder.
-3. **Play:** Double-click `AgrabahPort.exe` (or run on Linux/macOS). The game automatically detects your ROM and starts instantly!
-
-*(If you don't place the ROM beforehand, a clean file selector will appear on first launch asking you to pick it).*
+> **Legal Notice:** This project does not contain any copyrighted ROM data, artwork, audio, or game assets. Users must provide their own legally acquired copy of the original Super Nintendo cartridge dump.
 
 ---
 
-## 🎮 Controls
+## Screenshots
 
-Controllers auto-detect when plugged in (Xbox, PlayStation, Nintendo Switch, and generic USB gamepads).
+<p align="center">
+  <img src="docs/images/gameplay_coop_running.png" width="48%" alt="Agrabah Market - 2-Player Co-op Mode">&nbsp;
+  <img src="docs/images/gameplay_coop_jump.png" width="48%" alt="Acrobatic Jumps and Platforming">
+</p>
+<p align="center">
+  <img src="docs/images/gameplay_rope_climb.png" width="48%" alt="Vertical Rope and Net Climbing">&nbsp;
+  <img src="docs/images/gameplay_apple_projectile.png" width="48%" alt="Independent Apple Projectile System">
+</p>
 
-| Action | Keyboard | Xbox Controller | PlayStation Controller | Nintendo Switch Pro |
+---
+
+## Key Features
+
+- **Ahead-of-Time Static Recompilation:** Runs as a compiled, native C/C++ executable on Windows, Linux, and macOS without emulation overhead.
+- **Authentic 2-Player Co-op:** Player 2 enters as Prince Ali, featuring decoupled collision detection, independent apple projectile pool (`WRAM $0369`), separate health counters, and rope/net traversal.
+- **Locked 60.0 FPS & Deterministic Frame Pacing:** Fully decoupled software delay and hardware VSync pipeline to ensure smooth motion across high-refresh displays.
+- **Display Pipeline:** Authentic 4:3 CRT and 8:7 square-pixel presentation modes with integer scaling, pillarboxing, and post-processing shaders (*Sharp Pixel*, *CRT Scanlines*, *Warm Composite TV*).
+- **No Scanline Sprite Limit:** Removes the original 32-sprites-per-scanline hardware bottleneck, eliminating sprite flickering during heavy action.
+- **Zero-Config Gamepad Support:** Native SDL3 controller layer with hotplugging and automatic mapping for Xbox, PlayStation DualShock/DualSense, Nintendo Switch Pro, and standard DirectInput controllers.
+- **Fully Portable Runtime:** Self-contained configuration (`config.ini`) and save directory (`saves/`). No system registry dependencies.
+- **Quality of Life:** Real-time visual rewind buffer (`F12`), visual save-state gallery (`F11`), and an in-game configuration overlay (`ESC`).
+
+---
+
+## Quick Start
+
+1. **Download:** Get the latest release archive from [Releases](https://github.com/testsenvergonha-sys/AgrabahPort/releases) or install directly via [RecompLauncher](https://recomplauncher.com).
+2. **Provide your ROM:** Place a clean, headerless USA Super Nintendo ROM named `Aladdin.sfc` (or `.smc`) inside the game folder.
+3. **Launch:** Run `AgrabahPort.exe`. The port verifies the ROM integrity and boots instantly.
+
+*If no ROM is present on first launch, a file picker will prompt you to select your dumped cartridge.*
+
+---
+
+## ROM Compatibility & Integrity
+
+To ensure timing and memory layout accuracy, AgrabahPort requires the original North American (USA) release:
+
+| Property | Target Value |
+|---|---|
+| **Title** | *Disney's Aladdin* (USA) |
+| **System** | Super Nintendo Entertainment System (SNES) |
+| **Format** | Headerless `.sfc` (or standard `.smc`) |
+| **File Size** | `1,310,720` bytes |
+| **CRC-32** | `124D8E4D` |
+| **SHA-256** | `AA768B8B00123717C8D49F2C6731CDBFD80AB6A54128BAE7594E93F45E38A19E` |
+
+---
+
+## Controls
+
+Input bindings are fully customizable via `keybinds.ini` or in-game via the `ESC` settings menu.
+
+| Action | Keyboard (Player 1) | Xbox Controller | PlayStation | Switch Pro |
 |---|---|---|---|---|
 | **Move / Crouch** | Arrow Keys / `W, A, S, D` | D-Pad / Left Stick | D-Pad / Left Stick | D-Pad / Left Stick |
-| **Jump** | `Z` or `Space` | `A` Button | `Cross` (X) | `B` Button |
-| **Slash (Sword)** | `X` | `X` Button | `Square` | `Y` Button |
+| **Jump** | `Z` / `Space` | `A` Button | `Cross` (X) | `B` Button |
+| **Sword Slash** | `X` | `X` Button | `Square` | `Y` Button |
 | **Throw Apple** | `C` | `Y` Button | `Triangle` | `X` Button |
-| **Sprint / Run** | `Shift` | `B` Button | `Circle` | `A` Button |
-| **Pause Game** | `Enter` | `Start` / `Menu` | `Options` | `+` (Plus) |
-| **In-Game Settings Menu** | `ESC` | `Back` + `LB` | `Share` + `L1` | `-` + `L` |
-| **Toggle Fullscreen** | `Alt + Enter` | — | — | — |
-| **Quick Save State** | `Shift + F1` … `F10` | — | — | — |
-| **Quick Load State** | `F1` … `F10` | — | — | — |
-| **Save State Browser** | `F11` | — | — | — |
-| **Real-time Rewind** | `F12` | `Back` + `R3` | `Share` + `R3` | `-` + `R-Stick` |
+| **Dash / Run** | `Left Shift` | `B` Button | `Circle` | `A` Button |
+| **Pause** | `Enter` | `Start` / `Menu` | `Options` | `+` (Plus) |
+| **In-Game Menu** | `Escape` | `Back` + `LB` | `Share` + `L1` | `-` + `L` |
+| **Fullscreen Toggle** | `Alt + Enter` | — | — | — |
+| **Quick Save / Load** | `Shift + F1..F10` / `F1..F10` | — | — | — |
+| **Save State Menu** | `F11` | — | — | — |
+| **Real-time Rewind** | `F12` | `Back` + `R3` | `Share` + `R3` | `-` + `R3` |
+
+*For local 2-Player Co-op, connect a second controller (`SourceP2 = 2` in `config.ini`).*
 
 ---
 
-## ✨ Features
-
-- **100% Portable Mode:** Keep your game on a USB flash drive. Saves (`saves/`), settings (`config.ini`), and states stay cleanly in the game folder without cluttering your PC.
-- **Ultra-Low Latency:** Native execution eliminates emulator audio buffer lag and input latency.
-- **CRT & Video Shaders:** Built-in retro display shaders: *Sharp Pixel*, *CRT Soft Scanlines*, *Warm Composite TV*, and *LCD Grid*.
-- **No Sprite Limits:** Removes the SNES 32-sprites-per-scanline hardware limit to eliminate character flickering.
-- **Modern Display Support:** Seamless window resizing, crisp aspect ratio correction (4:3 CRT authentic or 8:7 square pixels), and VSync.
-- **Live In-Game Menu (`ESC`):** Tweak video, audio, shaders, and controls on the fly without quitting the game.
-- **Visual Rewind (`F12`) & Save States (`F11`):** Rewind past missed jumps and manage save slots visually.
-
----
-
-## ❓ Frequently Asked Questions (FAQ)
-
-<details>
-<summary><strong>Which ROM version is required?</strong></summary>
-
-You need a legally dumped USA cartridge of *Disney's Aladdin* for the Super Nintendo:
-- **Format:** Headerless `.sfc` (or headered `.smc`)
-- **Size:** `1,310,720` bytes (Headerless)
-- **CRC32:** `124d8e4d`
-- **SHA-256:** `aa768b8b00123717c8d49f2c6731cdbfd80ab6a54128bae7594e93f45e38a19e`
-</details>
-
-<details>
-<summary><strong>Where are my saved games stored?</strong></summary>
-
-Everything is kept right inside the game folder in the `saves/` directory. Battery backup saves (`save.srm`) and state files remain portable so you can back them up or transfer them between computers easily.
-</details>
-
-<details>
-<summary><strong>Can I customize the controls?</strong></summary>
-
-Yes! You can edit `keybinds.ini` located next to the executable or adjust controls from the in-game launcher menu accessed by pressing `ESC`.
-</details>
-
----
-
-## 🛠️ For Developers & Building from Source
-
-<details>
-<summary><strong>Click to expand technical build instructions</strong></summary>
+## Building from Source
 
 ### Prerequisites
-- Clang / GCC with C11 and C++17 support
-- CMake 3.20+
-- Ninja build system
+- C11 and C++17 compatible compiler (Clang 15+, GCC 12+, or MSVC 2022)
+- CMake 3.20+ and Ninja build system
 - Python 3.9+
-- Rust toolchain (`stable-x86_64-pc-windows-gnullvm` or standard host)
 - SDL3 and zlib development libraries
 
-### Building Locally
+### Compilation
 ```bash
+# Clone the repository with all submodules
 git clone --recurse-submodules https://github.com/testsenvergonha-sys/AgrabahPort.git
 cd AgrabahPort
 
-# 1. Provide your clean Aladdin.sfc dump
+# Place your validated ROM in the project directory
 cp /path/to/Aladdin.sfc roms/Aladdin.sfc
 
-# 2. Run static recompilation
+# Generate static recompilation sources
 bash tools/regen.sh
 
-# 3. Configure and build
+# Configure and compile
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target AladdinSNESRecomp
+cmake --build build --config Release
 ```
 
-The resulting executable will be available at `build/AgrabahPort.exe`.
-</details>
+The compiled binary will be placed at `build/AgrabahPort.exe`.
 
 ---
 
-## 📜 Legal Notice
+## License & Disclaimer
 
-AgrabahPort is a fan recreation and static recompilation engine. It is not affiliated with, endorsed by, or sponsored by Capcom Co., Ltd., Disney Enterprises, Inc., or Nintendo Co., Ltd. *Aladdin* and all associated characters, artwork, and trademarks belong to their respective copyright holders.
+AgrabahPort is an independent, non-commercial fan project developed for educational and software preservation purposes under static recompilation principles.
+
+- *Disney's Aladdin*, character names, and visual likenesses are registered trademarks and copyright of **Disney Enterprises, Inc.**
+- Original Super Nintendo game code and design are copyright **Capcom Co., Ltd.**
+- This project is neither affiliated with nor endorsed by Capcom, Disney, or Nintendo.
+- No commercial distribution, licensing, or monetized access is permitted.
