@@ -28,8 +28,17 @@ static AladdinGuestPlayer s_p2 = {
     .spawned = 0,
     .screen_x = 70,
     .screen_y = 190,
+    .rope_cooldown = 0,
+    .rope_anchor_x = 0,
+    .rope_anchor_y = 0,
 };
 static int s_coop_enabled = 1;
+static AladdinP2Projectile s_p2_apples[MAX_P2_PROJECTILES];
+
+AladdinP2Projectile *AladdinCoop_GetProjectiles(void)
+{
+    return s_p2_apples;
+}
 
 /*
  * Prince Ali / Alternate Aladdin Palette (Sprite Palette 5 in CGRAM)
@@ -83,6 +92,10 @@ void AladdinCoop_Init(void)
     s_p2.spawned = 0;
     s_p2.screen_x = 70;
     s_p2.screen_y = 190;
+    s_p2.rope_cooldown = 0;
+    s_p2.rope_anchor_x = 0;
+    s_p2.rope_anchor_y = 0;
+    memset(s_p2_apples, 0, sizeof(s_p2_apples));
 }
 
 void AladdinCoop_Reset(void)
@@ -229,6 +242,156 @@ static int FindPlayer1Pieces(int16_t *out_center_x, int16_t *out_feet_y, int *ou
     return count;
 }
 
+/* Dynamic detection of vertical ropes in OAM slots 16..79 */
+static int CheckVerticalRopeOAM(int screen_x, int screen_y, int *out_rope_sx)
+{
+    for (int i = 16; i < 80; ++i) {
+        uint8_t spr_y = g_ram[0xFA80 + i * 4 + 1];
+        if (spr_y >= 224) continue;
+
+        uint8_t spr_x = g_ram[0xFA80 + i * 4 + 0];
+        uint8_t spr_tile = g_ram[0xFA80 + i * 4 + 2];
+        uint8_t spr_attr = g_ram[0xFA80 + i * 4 + 3];
+        uint8_t pal = (spr_attr >> 1) & 7;
+
+        /* Palette 3 or 7: Vertical rope tiles 0xB0..0xB8, 0xD0, 0xC2..0xCA */
+        if (pal == 3 || pal == 7) {
+            bool is_vrope = (spr_tile >= 0xB0 && spr_tile <= 0xB8) ||
+                            (spr_tile == 0xD0) ||
+                            (spr_tile >= 0xC2 && spr_tile <= 0xCA);
+            if (is_vrope) {
+                int dx = screen_x - (int)spr_x;
+                int dy = screen_y - (int)spr_y;
+                if (abs(dx) <= 20 && dy >= -40 && dy <= 28) {
+                    if (out_rope_sx) *out_rope_sx = spr_x;
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+/* Dynamic detection of horizontal clotheslines and nets in OAM slots 16..79 */
+static int CheckHorizontalRopeOAM(int screen_x, int screen_y, int *out_rope_sy)
+{
+    for (int i = 16; i < 80; ++i) {
+        uint8_t spr_y = g_ram[0xFA80 + i * 4 + 1];
+        if (spr_y >= 224) continue;
+
+        uint8_t spr_x = g_ram[0xFA80 + i * 4 + 0];
+        uint8_t spr_tile = g_ram[0xFA80 + i * 4 + 2];
+        uint8_t spr_attr = g_ram[0xFA80 + i * 4 + 3];
+        uint8_t pal = (spr_attr >> 1) & 7;
+
+        /* Palette 4 or 7: Horizontal clothesline / hanging net tiles 0xC0..0xDC */
+        if (pal == 7 || pal == 4) {
+            bool is_hrope = (spr_tile >= 0xC0 && spr_tile <= 0xDC);
+            if (is_hrope) {
+                int dx = screen_x - (int)spr_x;
+                int dy = screen_y - (int)spr_y;
+                if (abs(dx) <= 28 && dy >= -10 && dy <= 32) {
+                    if (out_rope_sy) *out_rope_sy = spr_y + 16;
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+/* Spawn a Player 2 Apple projectile */
+static void SpawnPlayer2Apple(void)
+{
+    for (int i = 0; i < MAX_P2_PROJECTILES; ++i) {
+        if (!s_p2_apples[i].active) {
+            s_p2_apples[i].active = 1;
+            s_p2_apples[i].world_x = s_p2.world_x + (s_p2.facing ? -12 : 12);
+            s_p2_apples[i].world_y = s_p2.world_y - 20;
+            s_p2_apples[i].vx = s_p2.facing ? -5 : 5;
+            s_p2_apples[i].vy = -2;
+            s_p2_apples[i].anim_timer = 0;
+            break;
+        }
+    }
+}
+
+/* Update Player 2 Apple projectile physics, terrain and enemy collision */
+static void UpdatePlayer2Projectiles(void)
+{
+    uint16_t cam_x = *(uint16_t*)&g_ram[0x19ED];
+    uint16_t cam_y = *(uint16_t*)&g_ram[0x19F1];
+
+    for (int p = 0; p < MAX_P2_PROJECTILES; ++p) {
+        if (!s_p2_apples[p].active) continue;
+
+        AladdinP2Projectile *app = &s_p2_apples[p];
+
+        /* Update projectile flight position */
+        app->world_x += app->vx;
+        app->world_y += app->vy;
+        app->anim_timer++;
+
+        /* Gravity: accelerate vy downward up to terminal velocity 6 */
+        if (app->anim_timer & 1) {
+            if (app->vy < 6) app->vy += 1;
+        }
+
+        /* Screen coordinates */
+        app->screen_x = app->world_x - cam_x;
+        app->screen_y = app->world_y - cam_y;
+
+        /* Despawn if out of viewport */
+        if (app->screen_x < -16 || app->screen_x > 272 ||
+            app->screen_y < -16 || app->screen_y > 240) {
+            app->active = 0;
+            continue;
+        }
+
+        /* Solid terrain collision */
+        if (Aladdin_IsSolidAt(app->world_x, app->world_y)) {
+            app->active = 0;
+            continue;
+        }
+
+        /* Enemy collision: check dynamic actors in OAM slots 16..79 */
+        for (int i = 16; i < 80; ++i) {
+            uint8_t spr_y = g_ram[0xFA80 + i * 4 + 1];
+            if (spr_y >= 224) continue;
+
+            uint8_t spr_x = g_ram[0xFA80 + i * 4 + 0];
+            uint8_t spr_attr = g_ram[0xFA80 + i * 4 + 3];
+            uint8_t pal = (spr_attr >> 1) & 7;
+
+            if (pal == 4 || pal == 3) {
+                int edx = app->screen_x - spr_x;
+                int edy = app->screen_y - spr_y;
+                if (abs(edx) < 20 && abs(edy) < 22) {
+                    /* Defeat enemy in OAM */
+                    g_ram[0xFA80 + i * 4 + 1] = 225;
+                    if (g_ppu) g_ppu->oam[i * 2] = (225 << 8);
+
+                    /* Zero HP in dynamic enemy pool at WRAM 0x0B5B..0x1400 */
+                    for (int s = 0; s < 27; ++s) {
+                        uint16_t base = 0x0B5B + s * 0x50;
+                        if (g_ram[base] != 0) {
+                            int16_t ex = *(int16_t*)&g_ram[base + 0x0C];
+                            int16_t ey = *(int16_t*)&g_ram[base + 0x0F];
+                            if (abs(app->world_x - ex) < 28 && abs(app->world_y - ey) < 28) {
+                                g_ram[base + 0x42] = 0;
+                                g_ram[base + 0x43] = 0x0C; /* Hit by apple */
+                            }
+                        }
+                    }
+
+                    app->active = 0;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 /* Check dynamic actor collisions: swinging wooden beams and enemies */
 static void CheckActorCollisions(void)
 {
@@ -339,113 +502,259 @@ static void UpdatePlayer2(int16_t p1_screen_center_x, int16_t p1_screen_feet_y)
         s_p2.spawned = 1;
         s_p2.grounded = 1;
         s_p2.health = 3;
+        s_p2.apples = 10;
+        s_p2.rope_cooldown = 0;
     }
 
     /* Timers */
     if (s_p2.invuln_timer > 0) s_p2.invuln_timer--;
+    if (s_p2.rope_cooldown > 0) s_p2.rope_cooldown--;
+
     if (s_p2.attack_timer > 0) {
         s_p2.attack_timer--;
-        if (s_p2.attack_timer == 0 && s_p2.state == 3) {
-            s_p2.state = (s_p2.vx != 0) ? 1 : 0;
+        if (s_p2.attack_timer == 0) {
+            if (s_p2.state == ALADDIN_STATE_SLASH || s_p2.state == ALADDIN_STATE_THROW_GROUND) {
+                s_p2.state = (s_p2.vx != 0) ? ALADDIN_STATE_RUN : ALADDIN_STATE_IDLE;
+            } else if (s_p2.state == ALADDIN_STATE_THROW_AIR) {
+                s_p2.state = ALADDIN_STATE_JUMP;
+            }
         }
     }
 
-    /* Horizontal Movement */
-    int speed = (pad & 0x0202) ? 3 : 2; /* Hold Y / X to dash/run */
-    s_p2.vx = 0;
-    if (pad & 0x0040) { /* D-Pad Left */
-        s_p2.vx = -speed;
-        s_p2.facing = 1;
-    } else if (pad & 0x0080) { /* D-Pad Right */
-        s_p2.vx = speed;
-        s_p2.facing = 0;
-    }
+    /* Edge-triggered buttons */
+    /* Jump: Button B = 0x0001 */
+    bool jump_held = (pad & 0x0001) != 0;
+    bool jump_edge = jump_held && ((s_p2.last_pad & 0x0001) == 0);
 
-    /* Animation timer & state */
-    if (s_p2.vx != 0 && s_p2.grounded) {
-        s_p2.anim_timer++;
-        if (s_p2.state != 3) s_p2.state = 1; /* Run */
-    } else if (s_p2.grounded && s_p2.state != 3 && s_p2.state != 4) {
-        s_p2.state = 0; /* Idle */
-    }
+    /* Apple Throw: Button A = 0x0100, Button X = 0x0200, Button R = 0x0800 */
+    bool throw_held = (pad & 0x0B00) != 0;
+    bool throw_edge = throw_held && ((s_p2.last_pad & 0x0B00) == 0);
 
-    /* Horizontal obstacle & wall collision */
-    if (s_p2.vx > 0) {
-        if (Aladdin_IsSolidAt(s_p2.world_x + 10, s_p2.world_y - 12) ||
-            Aladdin_IsSolidAt(s_p2.world_x + 10, s_p2.world_y - 24)) {
+    /* Slash / Melee: Button Y = 0x0002 */
+    bool atk_held = (pad & 0x0002) != 0;
+    bool atk_edge = atk_held && ((s_p2.last_pad & 0x0002) == 0);
+
+    /* Trigger Apple Throw */
+    if (throw_edge && s_p2.attack_timer == 0 && s_p2.apples > 0) {
+        s_p2.apples--;
+        SpawnPlayer2Apple();
+        if (s_p2.grounded) {
+            s_p2.attack_timer = 16;
+            s_p2.state = ALADDIN_STATE_THROW_GROUND;
             s_p2.vx = 0;
-        }
-    } else if (s_p2.vx < 0) {
-        if (Aladdin_IsSolidAt(s_p2.world_x - 10, s_p2.world_y - 12) ||
-            Aladdin_IsSolidAt(s_p2.world_x - 10, s_p2.world_y - 24)) {
-            s_p2.vx = 0;
-        }
-    }
-    s_p2.world_x += s_p2.vx;
-
-    /* Jump (Button B = 0x0001 or Button A = 0x0100) - Edge triggered! */
-    bool jump_held = (pad & 0x0101) != 0;
-    bool jump_edge = jump_held && ((s_p2.last_pad & 0x0101) == 0);
-    if (jump_edge && s_p2.grounded) {
-        s_p2.vy = -10; /* Full, satisfying SNES jump! */
-        s_p2.grounded = 0;
-        s_p2.state = 2; /* Jump */
-    }
-
-    /* Sword Attack (Button Y = 0x0002 or Button X = 0x0200) - Edge triggered! */
-    bool atk_held = (pad & 0x0202) != 0;
-    bool atk_edge = atk_held && ((s_p2.last_pad & 0x0202) == 0);
-    if (atk_edge && s_p2.attack_timer == 0) {
-        s_p2.attack_timer = 16;
-        s_p2.state = 3; /* Slash */
-    }
-
-    /* Crouch (D-Pad Down = 0x0020) */
-    if ((pad & 0x0020) && s_p2.grounded && s_p2.vx == 0 && s_p2.state != 3) {
-        s_p2.state = 4; /* Crouch */
-    }
-
-    /* Apply Gravity & Vertical Motion */
-    if (!s_p2.grounded) {
-        if (!jump_held && s_p2.vy < -3) {
-            s_p2.vy = -3; /* Variable jump cut on early release */
-        }
-        static int s_grav_sub = 0;
-        s_grav_sub++;
-        if (s_p2.vy < 0) {
-            if (s_grav_sub & 1) s_p2.vy += 1;
         } else {
-            s_p2.vy += 1;
+            s_p2.attack_timer = 12;
+            s_p2.state = ALADDIN_STATE_THROW_AIR;
         }
-        if (s_p2.vy > 7) s_p2.vy = 7;
+    }
+    /* Trigger Slash */
+    else if (atk_edge && s_p2.attack_timer == 0 &&
+             s_p2.state != ALADDIN_STATE_CLIMB_VERTICAL && s_p2.state != ALADDIN_STATE_HANG_HORIZONTAL) {
+        s_p2.attack_timer = 16;
+        s_p2.state = ALADDIN_STATE_SLASH;
+    }
 
-        s_p2.world_y += s_p2.vy;
+    /* State Machine Execution */
+    if (s_p2.state == ALADDIN_STATE_CLIMB_VERTICAL) {
+        /* Vertical Rope / Net Climbing State */
+        s_p2.vx = 0;
+        s_p2.vy = 0;
+        s_p2.grounded = 0;
 
-        /* Ceiling collision */
-        if (s_p2.vy < 0 && Aladdin_IsSolidAt(s_p2.world_x, s_p2.world_y - 32)) {
-            s_p2.vy = 0;
-        }
+        /* D-Pad Up / Down vertical climbing */
+        if (pad & 0x0010) { /* Up */
+            if (!Aladdin_IsSolidAt(s_p2.world_x, s_p2.world_y - 32)) {
+                s_p2.world_y -= 2;
+            }
+            s_p2.anim_timer++;
+        } else if (pad & 0x0020) { /* Down */
+            s_p2.world_y += 2;
+            s_p2.anim_timer++;
 
-        /* Floor collision when descending */
-        if (s_p2.vy >= 0) {
+            /* Floor landing check */
             int floor_y = Aladdin_FindFloorBelow(s_p2.world_x, s_p2.world_y - 8, 20);
             if (s_p2.world_y >= floor_y) {
                 s_p2.world_y = floor_y;
-                s_p2.vy = 0;
                 s_p2.grounded = 1;
-                s_p2.state = (s_p2.vx != 0) ? 1 : 0;
+                s_p2.state = ALADDIN_STATE_IDLE;
             }
         }
-    } else {
-        /* Ground tracking when walking: follow slopes/steps or detect ledge drops */
-        int floor_y = Aladdin_FindFloorBelow(s_p2.world_x, s_p2.world_y - 6, 24);
-        int diff = floor_y - s_p2.world_y;
-        if (diff >= -8 && diff <= 8) {
-            s_p2.world_y = floor_y;
-        } else if (diff > 8) {
-            /* Walked off ledge */
+
+        /* Exit Transitions from Vertical Rope */
+        if (jump_edge) {
+            if (pad & 0x0020) {
+                /* Drop release */
+                s_p2.vy = 1;
+                s_p2.state = ALADDIN_STATE_JUMP;
+                s_p2.rope_cooldown = 15;
+            } else {
+                /* Athletic dismount jump */
+                s_p2.vy = -8;
+                s_p2.vx = (pad & 0x0040) ? -3 : ((pad & 0x0080) ? 3 : (s_p2.facing ? 3 : -3));
+                s_p2.world_x += s_p2.vx;
+                s_p2.state = ALADDIN_STATE_JUMP;
+                s_p2.rope_cooldown = 15;
+            }
+        }
+    }
+    else if (s_p2.state == ALADDIN_STATE_HANG_HORIZONTAL) {
+        /* Horizontal Rope / Net / Clothesline Hanging State */
+        s_p2.vx = 0;
+        s_p2.vy = 0;
+        s_p2.grounded = 0;
+
+        /* D-Pad Left / Right lateral shimmy */
+        if (pad & 0x0040) { /* Left */
+            if (!Aladdin_IsSolidAt(s_p2.world_x - 10, s_p2.world_y - 12)) {
+                s_p2.world_x -= 2;
+            }
+            s_p2.facing = 1;
+            s_p2.anim_timer++;
+        } else if (pad & 0x0080) { /* Right */
+            if (!Aladdin_IsSolidAt(s_p2.world_x + 10, s_p2.world_y - 12)) {
+                s_p2.world_x += 2;
+            }
+            s_p2.facing = 0;
+            s_p2.anim_timer++;
+        }
+
+        /* Exit Transitions from Horizontal Hang */
+        if (jump_edge) {
+            if (pad & 0x0020) {
+                /* Drop release */
+                s_p2.vy = 1;
+                s_p2.state = ALADDIN_STATE_JUMP;
+                s_p2.rope_cooldown = 15;
+            } else {
+                /* Athletic dismount jump */
+                s_p2.vy = -8;
+                s_p2.vx = (pad & 0x0040) ? -3 : ((pad & 0x0080) ? 3 : 0);
+                s_p2.world_x += s_p2.vx;
+                s_p2.state = ALADDIN_STATE_JUMP;
+                s_p2.rope_cooldown = 15;
+            }
+        }
+    }
+    else {
+        /* Normal Grounded & Airborne Physics */
+
+        /* Horizontal Movement (if not locked in ground throw) */
+        int speed = (pad & 0x0202) ? 3 : 2; /* Hold Y / X to dash/run */
+        s_p2.vx = 0;
+        if (s_p2.state != ALADDIN_STATE_THROW_GROUND) {
+            if (pad & 0x0040) { /* D-Pad Left */
+                s_p2.vx = -speed;
+                s_p2.facing = 1;
+            } else if (pad & 0x0080) { /* D-Pad Right */
+                s_p2.vx = speed;
+                s_p2.facing = 0;
+            }
+        }
+
+        /* Animation timer & state */
+        if (s_p2.vx != 0 && s_p2.grounded) {
+            s_p2.anim_timer++;
+            if (s_p2.state != ALADDIN_STATE_SLASH && s_p2.state != ALADDIN_STATE_THROW_GROUND) {
+                s_p2.state = ALADDIN_STATE_RUN;
+            }
+        } else if (s_p2.grounded && s_p2.state != ALADDIN_STATE_SLASH &&
+                   s_p2.state != ALADDIN_STATE_THROW_GROUND && s_p2.state != ALADDIN_STATE_CROUCH) {
+            s_p2.state = ALADDIN_STATE_IDLE;
+        }
+
+        /* Horizontal obstacle & wall collision */
+        if (s_p2.vx > 0) {
+            if (Aladdin_IsSolidAt(s_p2.world_x + 10, s_p2.world_y - 12) ||
+                Aladdin_IsSolidAt(s_p2.world_x + 10, s_p2.world_y - 24)) {
+                s_p2.vx = 0;
+            }
+        } else if (s_p2.vx < 0) {
+            if (Aladdin_IsSolidAt(s_p2.world_x - 10, s_p2.world_y - 12) ||
+                Aladdin_IsSolidAt(s_p2.world_x - 10, s_p2.world_y - 24)) {
+                s_p2.vx = 0;
+            }
+        }
+        s_p2.world_x += s_p2.vx;
+
+        /* Jump (Button B = 0x0001) - Edge triggered! */
+        if (jump_edge && s_p2.grounded && s_p2.state != ALADDIN_STATE_THROW_GROUND) {
+            s_p2.vy = -10; /* Full, satisfying SNES jump! */
             s_p2.grounded = 0;
-            s_p2.vy = 0;
+            s_p2.state = ALADDIN_STATE_JUMP;
+        }
+
+        /* Crouch (D-Pad Down = 0x0020) */
+        if ((pad & 0x0020) && s_p2.grounded && s_p2.vx == 0 &&
+            s_p2.state != ALADDIN_STATE_SLASH && s_p2.state != ALADDIN_STATE_THROW_GROUND) {
+            s_p2.state = ALADDIN_STATE_CROUCH;
+        }
+
+        /* Apply Gravity & Vertical Motion */
+        if (!s_p2.grounded) {
+            if (!jump_held && s_p2.vy < -3) {
+                s_p2.vy = -3; /* Variable jump cut on early release */
+            }
+            static int s_grav_sub = 0;
+            s_grav_sub++;
+            if (s_p2.vy < 0) {
+                if (s_grav_sub & 1) s_p2.vy += 1;
+            } else {
+                s_p2.vy += 1;
+            }
+            if (s_p2.vy > 7) s_p2.vy = 7;
+
+            s_p2.world_y += s_p2.vy;
+
+            /* Ceiling collision */
+            if (s_p2.vy < 0 && Aladdin_IsSolidAt(s_p2.world_x, s_p2.world_y - 32)) {
+                s_p2.vy = 0;
+            }
+
+            /* Floor collision when descending */
+            if (s_p2.vy >= 0) {
+                int floor_y = Aladdin_FindFloorBelow(s_p2.world_x, s_p2.world_y - 8, 20);
+                if (s_p2.world_y >= floor_y) {
+                    s_p2.world_y = floor_y;
+                    s_p2.vy = 0;
+                    s_p2.grounded = 1;
+                    s_p2.state = (s_p2.vx != 0) ? ALADDIN_STATE_RUN : ALADDIN_STATE_IDLE;
+                }
+            }
+
+            /* Dynamic Rope & Net detection while airborne */
+            if (!s_p2.grounded && s_p2.rope_cooldown == 0 && s_p2.state != ALADDIN_STATE_THROW_AIR) {
+                int rope_sx = 0;
+                if (CheckVerticalRopeOAM(s_p2.screen_x, s_p2.screen_y, &rope_sx)) {
+                    if ((pad & 0x0030) != 0 || s_p2.vy > 0) {
+                        s_p2.world_x = rope_sx + cam_x;
+                        s_p2.rope_anchor_x = s_p2.world_x;
+                        s_p2.state = ALADDIN_STATE_CLIMB_VERTICAL;
+                        s_p2.vx = 0;
+                        s_p2.vy = 0;
+                    }
+                }
+
+                int rope_sy = 0;
+                if (s_p2.state != ALADDIN_STATE_CLIMB_VERTICAL &&
+                    CheckHorizontalRopeOAM(s_p2.screen_x, s_p2.screen_y, &rope_sy)) {
+                    s_p2.world_y = rope_sy + cam_y;
+                    s_p2.rope_anchor_y = s_p2.world_y;
+                    s_p2.state = ALADDIN_STATE_HANG_HORIZONTAL;
+                    s_p2.vx = 0;
+                    s_p2.vy = 0;
+                }
+            }
+        } else {
+            /* Ground tracking when walking: follow slopes/steps or detect ledge drops */
+            int floor_y = Aladdin_FindFloorBelow(s_p2.world_x, s_p2.world_y - 6, 24);
+            int diff = floor_y - s_p2.world_y;
+            if (diff >= -8 && diff <= 8) {
+                s_p2.world_y = floor_y;
+            } else if (diff > 8) {
+                /* Walked off ledge */
+                s_p2.grounded = 0;
+                s_p2.vy = 0;
+            }
         }
     }
 
@@ -545,6 +854,112 @@ static const AladdinSpriteDef kAladdinCrouchSprites[6] = {
     {   5, -30, 0x06, 0x20, 0 },
 };
 
+/* Ground throw wind-up (10 pieces, tag=throw_peak_f16, cx=128, fy=149) */
+static const AladdinSpriteDef kAladdinThrowWindupSprites[10] = {
+    {   -9,   -8, 0x0B, 0x20, 0 },
+    {    9,    0, 0x0D, 0x20, 0 },
+    {    1,    0, 0x0C, 0x20, 0 },
+    {   -9,  -16, 0x0A, 0x20, 0 },
+    {    8,  -32, 0x09, 0x20, 0 },
+    {   16,  -40, 0x08, 0x20, 0 },
+    {   -1,  -16, 0x04, 0x20, 1 },
+    {   -8,  -32, 0x02, 0x20, 1 },
+    {  -16,  -48, 0x06, 0x20, 1 },
+    {    0,  -48, 0x00, 0x20, 1 },
+};
+
+/* Ground throw release (9 pieces, tag=throw_peak_f20, cx=130, fy=161) */
+static const AladdinSpriteDef kAladdinThrowReleaseSprites[9] = {
+    {    4,    0, 0x0B, 0x20, 0 },
+    {   16,  -45, 0x0A, 0x20, 0 },
+    {   -8,  -40, 0x09, 0x20, 0 },
+    {   -8,  -48, 0x08, 0x20, 0 },
+    {   -8,  -56, 0x07, 0x20, 0 },
+    {  -16,  -56, 0x06, 0x20, 0 },
+    {   -4,  -16, 0x04, 0x20, 1 },
+    {   -8,  -32, 0x02, 0x20, 1 },
+    {    0,  -48, 0x00, 0x20, 1 },
+};
+
+/* Ground throw follow-through (9 pieces, tag=apple_thrown_f76, cx=84, fy=159) */
+static const AladdinSpriteDef kAladdinThrowFollowSprites[9] = {
+    {    6,  -32, 0x02, 0x20, 1 },
+    {    8,  -48, 0x00, 0x20, 1 },
+    {   -8,    0, 0x0B, 0x20, 0 },
+    {   -8,   -8, 0x0A, 0x20, 0 },
+    {   -8,  -16, 0x09, 0x20, 0 },
+    {   -2,  -24, 0x08, 0x20, 0 },
+    {   -2,  -32, 0x07, 0x20, 0 },
+    {    0,  -40, 0x06, 0x20, 0 },
+    {    0,  -16, 0x04, 0x20, 1 },
+};
+
+/* Vertical rope climb motion cycle 1 (9 pieces, tag=test_climb_rope, cx=131, fy=122) */
+static const AladdinSpriteDef kAladdinClimbSprites[9] = {
+    {  -16,    0, 0x0A, 0x20, 0 },
+    {  -16,   -8, 0x09, 0x20, 0 },
+    {   16,  -17, 0x08, 0x20, 0 },
+    {    8,  -17, 0x07, 0x20, 0 },
+    {    8,  -25, 0x06, 0x20, 0 },
+    {    8,  -33, 0x05, 0x20, 0 },
+    {    6,  -40, 0x04, 0x20, 0 },
+    {   -8,  -16, 0x02, 0x20, 1 },
+    {   -8,  -32, 0x00, 0x20, 1 },
+};
+
+/* Vertical rope climb motion cycle 2 (7 pieces, tag=stage1_pos8, cx=132, fy=150) */
+static const AladdinSpriteDef kAladdinClimbMotionSprites[7] = {
+    {    4,    0, 0x09, 0x20, 0 },
+    {   12,   -8, 0x08, 0x20, 0 },
+    {  -12,  -16, 0x07, 0x20, 0 },
+    {  -10,  -40, 0x06, 0x20, 0 },
+    {   12,    0, 0x04, 0x20, 1 },
+    {   -4,  -16, 0x02, 0x20, 1 },
+    {  -12,  -32, 0x00, 0x20, 1 },
+};
+
+/* Vertical rope idle grip (11 pieces, tag=test_reach_rope, cx=126, fy=90) */
+static const AladdinSpriteDef kAladdinReachRopeSprites[11] = {
+    {    5,  -48, 0x0D, 0x20, 0 },
+    {   13,    0, 0x0C, 0x20, 0 },
+    {    5,    0, 0x0B, 0x20, 0 },
+    {    5,  -24, 0x0A, 0x20, 0 },
+    {   -3,  -24, 0x09, 0x20, 0 },
+    {  -13,  -16, 0x02, 0x20, 1 },
+    {    3,  -16, 0x04, 0x20, 1 },
+    {  -11,  -32, 0x08, 0x20, 0 },
+    {  -11,  -40, 0x07, 0x20, 0 },
+    {   13,  -39, 0x06, 0x20, 0 },
+    {   -3,  -40, 0x00, 0x20, 1 },
+};
+
+/* Horizontal clothesline / rope idle hang (10 pieces, tag=stage1_pos5, cx=125, fy=148) */
+static const AladdinSpriteDef kAladdinHangHorizontalIdleSprites[10] = {
+    {  -12,    0, 0x0C, 0x20, 0 },
+    {    4,  -16, 0x0B, 0x20, 0 },
+    {   12,  -24, 0x0A, 0x20, 0 },
+    {   12,  -32, 0x09, 0x20, 0 },
+    {   -2,  -40, 0x08, 0x20, 0 },
+    {  -10,  -40, 0x07, 0x20, 1 },
+    {   -2,  -48, 0x06, 0x20, 1 },
+    {  -12,  -16, 0x04, 0x20, 1 },
+    {   -4,  -32, 0x02, 0x20, 1 },
+    {    6,  -48, 0x00, 0x20, 0 },
+};
+
+/* Horizontal clothesline / rope shimmy movement (9 pieces, tag=stage1_pos6, cx=126, fy=89) */
+static const AladdinSpriteDef kAladdinHangHorizontalShimmySprites[9] = {
+    {  -16,    0, 0x0C, 0x20, 0 },
+    {   17,  -34, 0x0B, 0x20, 0 },
+    {   -7,  -24, 0x0A, 0x20, 0 },
+    {   -7,  -32, 0x09, 0x20, 0 },
+    {   -7,  -40, 0x08, 0x20, 0 },
+    {  -15,  -16, 0x06, 0x20, 1 },
+    {    1,  -16, 0x04, 0x20, 1 },
+    {    1,  -32, 0x02, 0x20, 1 },
+    {    1,  -48, 0x00, 0x20, 1 },
+};
+
 static void EmitPlayer2FromTable(const AladdinSpriteDef *table, int count)
 {
     int p2_slot = 80;
@@ -612,8 +1027,7 @@ static void EmitPlayer2Sprites(int16_t p1_center_x, int16_t p1_feet_y, const int
         return;
     }
 
-    /* Completely decoupled independent Aladdin 2 animations */
-    if (s_p2.state == 1) {
+    if (s_p2.state == ALADDIN_STATE_RUN) {
         /* Run: alternate two running cycle frames every 8 ticks */
         if ((s_p2.anim_timer >> 3) & 1) {
             EmitPlayer2FromTable(kAladdinRunSprites2, 7);
@@ -622,19 +1036,61 @@ static void EmitPlayer2Sprites(int16_t p1_center_x, int16_t p1_feet_y, const int
         }
         return;
     }
-    if (s_p2.state == 2) {
+    if (s_p2.state == ALADDIN_STATE_JUMP) {
         /* Jump */
         EmitPlayer2FromTable(kAladdinJumpSprites, 10);
         return;
     }
-    if (s_p2.state == 3) {
+    if (s_p2.state == ALADDIN_STATE_SLASH) {
         /* Attack / Sword Slash */
         EmitPlayer2FromTable(kAladdinAttackSprites, 10);
         return;
     }
-    if (s_p2.state == 4) {
+    if (s_p2.state == ALADDIN_STATE_CROUCH) {
         /* Crouch */
         EmitPlayer2FromTable(kAladdinCrouchSprites, 6);
+        return;
+    }
+    if (s_p2.state == ALADDIN_STATE_THROW_GROUND) {
+        /* Ground Apple Throw: Windup (16..12) -> Release (11..6) -> Follow-through (5..1) */
+        if (s_p2.attack_timer > 11) {
+            EmitPlayer2FromTable(kAladdinThrowWindupSprites, 10);
+        } else if (s_p2.attack_timer > 5) {
+            EmitPlayer2FromTable(kAladdinThrowReleaseSprites, 9);
+        } else {
+            EmitPlayer2FromTable(kAladdinThrowFollowSprites, 9);
+        }
+        return;
+    }
+    if (s_p2.state == ALADDIN_STATE_THROW_AIR) {
+        /* Aerial Apple Throw: Release -> Follow-through */
+        if (s_p2.attack_timer > 5) {
+            EmitPlayer2FromTable(kAladdinThrowReleaseSprites, 9);
+        } else {
+            EmitPlayer2FromTable(kAladdinThrowFollowSprites, 9);
+        }
+        return;
+    }
+    if (s_p2.state == ALADDIN_STATE_CLIMB_VERTICAL) {
+        /* Vertical Rope / Net: Climbing motion or Idle Grip */
+        if ((s_p2.last_pad & 0x0030) != 0) {
+            if ((s_p2.anim_timer >> 3) & 1) {
+                EmitPlayer2FromTable(kAladdinClimbMotionSprites, 7);
+            } else {
+                EmitPlayer2FromTable(kAladdinClimbSprites, 9);
+            }
+        } else {
+            EmitPlayer2FromTable(kAladdinReachRopeSprites, 11);
+        }
+        return;
+    }
+    if (s_p2.state == ALADDIN_STATE_HANG_HORIZONTAL) {
+        /* Horizontal Rope / Clothesline / Net: Lateral Shimmy or Idle Hang */
+        if ((s_p2.last_pad & 0x00C0) != 0 || s_p2.vx != 0) {
+            EmitPlayer2FromTable(kAladdinHangHorizontalShimmySprites, 9);
+        } else {
+            EmitPlayer2FromTable(kAladdinHangHorizontalIdleSprites, 10);
+        }
         return;
     }
 
@@ -662,10 +1118,111 @@ static void EmitPlayer2Hud(void)
         g_ram[0xFA80 + slot * 4 + 2] = tile;
         g_ram[0xFA80 + slot * 4 + 3] = attr;
 
+        /* 8x8 sprite */
+        int high_byte_idx = slot / 4;
+        int high_bit_shift = (slot % 4) * 2;
+        g_ram[0xFC80 + high_byte_idx] &= ~(0x03 << high_bit_shift);
+
         if (g_ppu) {
             g_ppu->oam[slot * 2 + 0] = (uint16_t)((uint8_t)hx | (hud_y << 8));
             g_ppu->oam[slot * 2 + 1] = (uint16_t)(tile | (attr << 8));
+            g_ppu->highOam[high_byte_idx] = g_ram[0xFC80 + high_byte_idx];
         }
+    }
+}
+
+/* Emit Player 2 Apple Projectiles into OAM slots 96..99 */
+static void EmitPlayer2Projectiles(void)
+{
+    for (int p = 0; p < MAX_P2_PROJECTILES; ++p) {
+        int slot = 96 + p;
+        if (s_p2_apples[p].active) {
+            int16_t sx = s_p2_apples[p].screen_x;
+            int16_t sy = s_p2_apples[p].screen_y;
+            if (sx < 0) sx = 0;
+            if (sx > 255) sx = 255;
+            if (sy < 0) sy = 0;
+            if (sy > 224) sy = 224;
+
+            /* Rotating apple sprite: 0xD3 / 0xD2 */
+            uint8_t tile = (s_p2_apples[p].anim_timer & 4) ? 0xD2 : 0xD3;
+            uint8_t attr = (5 << 1) | (3 << 4); /* Palette 5, Priority 3 */
+
+            g_ram[0xFA80 + slot * 4 + 0] = (uint8_t)sx;
+            g_ram[0xFA80 + slot * 4 + 1] = (uint8_t)sy;
+            g_ram[0xFA80 + slot * 4 + 2] = tile;
+            g_ram[0xFA80 + slot * 4 + 3] = attr;
+
+            /* 16x16 size (size bit = 1) */
+            int high_byte_idx = slot / 4;
+            int high_bit_shift = (slot % 4) * 2;
+            uint8_t val = (1 << 1);
+
+            g_ram[0xFC80 + high_byte_idx] &= ~(0x03 << high_bit_shift);
+            g_ram[0xFC80 + high_byte_idx] |= (val << high_bit_shift);
+
+            if (g_ppu) {
+                g_ppu->oam[slot * 2 + 0] = (uint16_t)((uint8_t)sx | ((uint8_t)sy << 8));
+                g_ppu->oam[slot * 2 + 1] = (uint16_t)(tile | (attr << 8));
+                g_ppu->highOam[high_byte_idx] = g_ram[0xFC80 + high_byte_idx];
+            }
+        } else {
+            g_ram[0xFA80 + slot * 4 + 1] = 225;
+            if (g_ppu) g_ppu->oam[slot * 2] = (225 << 8);
+        }
+    }
+}
+
+/* Emit Player 2 Apple HUD into OAM slots 100..102 and suppress 103..127 */
+static void EmitPlayer2AppleHud(void)
+{
+    const int16_t hud_y = 28;
+    const int16_t apple_icon_x = 210;
+    const int16_t tens_x = 222;
+    const int16_t ones_x = 230;
+
+    uint8_t tens = (s_p2.apples / 10) % 10;
+    uint8_t ones = s_p2.apples % 10;
+    uint8_t attr = (5 << 1) | (3 << 4); /* Palette 5, Priority 3 */
+
+    /* Slot 100: Mini apple icon */
+    g_ram[0xFA80 + 100 * 4 + 0] = (uint8_t)apple_icon_x;
+    g_ram[0xFA80 + 100 * 4 + 1] = (uint8_t)hud_y;
+    g_ram[0xFA80 + 100 * 4 + 2] = 0xD2;
+    g_ram[0xFA80 + 100 * 4 + 3] = attr;
+
+    /* Slot 101: Tens digit */
+    g_ram[0xFA80 + 101 * 4 + 0] = (uint8_t)tens_x;
+    g_ram[0xFA80 + 101 * 4 + 1] = (uint8_t)hud_y;
+    g_ram[0xFA80 + 101 * 4 + 2] = 0x70 + tens;
+    g_ram[0xFA80 + 101 * 4 + 3] = attr;
+
+    /* Slot 102: Ones digit */
+    g_ram[0xFA80 + 102 * 4 + 0] = (uint8_t)ones_x;
+    g_ram[0xFA80 + 102 * 4 + 1] = (uint8_t)hud_y;
+    g_ram[0xFA80 + 102 * 4 + 2] = 0x70 + ones;
+    g_ram[0xFA80 + 102 * 4 + 3] = attr;
+
+    for (int s = 100; s <= 102; ++s) {
+        int high_byte_idx = s / 4;
+        int high_bit_shift = (s % 4) * 2;
+        g_ram[0xFC80 + high_byte_idx] &= ~(0x03 << high_bit_shift);
+
+        if (g_ppu) {
+            uint8_t x = g_ram[0xFA80 + s * 4 + 0];
+            uint8_t y = g_ram[0xFA80 + s * 4 + 1];
+            uint8_t tile = g_ram[0xFA80 + s * 4 + 2];
+            uint8_t a = g_ram[0xFA80 + s * 4 + 3];
+            g_ppu->oam[s * 2 + 0] = (uint16_t)(x | (y << 8));
+            g_ppu->oam[s * 2 + 1] = (uint16_t)(tile | (a << 8));
+            g_ppu->highOam[high_byte_idx] = g_ram[0xFC80 + high_byte_idx];
+        }
+    }
+
+    /* Suppress slots 103..127 */
+    for (int s = 103; s < 128; ++s) {
+        g_ram[0xFA80 + s * 4 + 1] = 225;
+        if (g_ppu) g_ppu->oam[s * 2] = (225 << 8);
     }
 }
 
@@ -683,6 +1240,9 @@ void AladdinCoop_PostFrame(void)
     /* Update Player 2 motion, physics, and input */
     UpdatePlayer2(p1_center_x, p1_feet_y);
 
+    /* Update Player 2 Apple projectiles */
+    UpdatePlayer2Projectiles();
+
     /* Apply Prince Ali Palette to CGRAM */
     ApplyPrinceAliPalette();
 
@@ -692,8 +1252,14 @@ void AladdinCoop_PostFrame(void)
     /* Emit Player 2 sprites */
     EmitPlayer2Sprites(p1_center_x, p1_feet_y, p1_slots, p1_count);
 
-    /* Emit Player 2 HUD */
+    /* Emit Player 2 HUD Hearts */
     EmitPlayer2Hud();
+
+    /* Emit Player 2 Apple Projectiles */
+    EmitPlayer2Projectiles();
+
+    /* Emit Player 2 Apple HUD */
+    EmitPlayer2AppleHud();
 }
 
 void AladdinCoop_PrepareDraw(void)
@@ -714,4 +1280,6 @@ void AladdinCoop_PrepareDraw(void)
 
     EmitPlayer2Sprites(p1_center_x, p1_feet_y, p1_slots, p1_count);
     EmitPlayer2Hud();
+    EmitPlayer2Projectiles();
+    EmitPlayer2AppleHud();
 }

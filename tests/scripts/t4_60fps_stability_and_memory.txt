@@ -1,0 +1,10 @@
+loadstate 1
+wait 30
+dump t4_perf_start
+wait 200
+press right+p2:right 50
+wait 150
+press b+p2:b 20
+wait 150
+dump t4_perf_end
+quit

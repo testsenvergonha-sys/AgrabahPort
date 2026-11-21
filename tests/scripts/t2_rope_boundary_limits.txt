@@ -1,0 +1,10 @@
+loadstate 1
+wait 20
+press p2:right 40
+press p2:b 12
+wait 8
+press p2:up 80
+dump t2_rope_top
+press p2:down 100
+dump t2_rope_bottom
+quit

@@ -1,0 +1,7 @@
+loadstate 1
+wait 30
+dump t1_ammo_start
+press p2:a 2
+wait 10
+dump t1_ammo_thrown
+quit

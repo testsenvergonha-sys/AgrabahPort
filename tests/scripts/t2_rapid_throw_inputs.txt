@@ -1,0 +1,9 @@
+loadstate 1
+wait 20
+press p2:a 1
+press p2:r 1
+press p2:x 1
+press p2:a 1
+wait 10
+dump t2_rapid_throw
+quit

@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="assets/icon_source.png" alt="AgrabahPort" width="160">
 </p>
 
@@ -21,123 +21,128 @@
 </p>
 
 <p align="center">
-  <a href="README.md">English</a> | <strong>Português (Brasil)</strong> | <a href="CHANGELOG.md">Registro de Atualizações</a>
+  <a href="README.md">English</a> | <strong>Português (Brasil)</strong> | <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 ---
 
-## 🌟 Sobre o Jogo
+## Visão Geral
 
-O **AgrabahPort** é uma adaptação nativa para computadores do clássico **Disney's Aladdin** (Super Nintendo / SNES, lançado em 1993 pela lendária Capcom).
+O **AgrabahPort** é um port nativo e de código aberto para PC de *Disney's Aladdin* (Super Nintendo, 1993), desenvolvido originalmente pela Capcom, utilizando recompilação estática antecipada (*ahead-of-time recompilation*). Em vez de rodar sobre uma camada de emulação tradicional, as instruções 65816 do processador e as rotinas de áudio do chip SPC700 do SNES foram traduzidas diretamente para código C portável e compiladas como um executável nativo.
 
-Diferente de emuladores convencionais, o AgrabahPort traduz todo o código original de montagem do processador do SNES diretamente para a linguagem C nativa. O resultado é um executável de computador ultra-otimizado que roda diretamente no seu sistema operacional com **60 FPS perfeitos**, resposta instantânea aos controles, suporte automático a gamepads modernos, filtros de TV de tubo (CRT) e carregamento sem engasgos.
+O resultado é uma execução direta no hardware hospedeiro com sincronização perfeita em **60.0 FPS cravados**, latência de entrada mínima, suporte completo a gamepads modernos e simulação fiel de telas CRT. Além disso, o AgrabahPort traz um modo cooperativo autêntico para **2 Jogadores simultâneos**, permitindo que o segundo jogador assuma o controle do Príncipe Ali com física, arremesso de maçãs e mecânicas de escalada independentes.
 
-> ⚖️ **Traga Sua Própria ROM (Bring Your Own ROM):** Este projeto **não distribui** nenhum arquivo protegido por direitos autorais (ROM, músicas ou artes da Capcom/Disney). O jogador deve fornecer o arquivo do seu próprio cartucho original do Super Nintendo.
-
----
-
-## ⚡ Como Jogar em 3 Passos Simples
-
-1. **Baixe o jogo:** Baixe o arquivo `.zip` da versão mais recente na página de [Releases](https://github.com/testsenvergonha-sys/AgrabahPort/releases) (ou instale com 1 clique pelo [RecompLauncher](https://recomplauncher.com)).
-2. **Coloque sua ROM:** Extraia a pasta em qualquer lugar e coloque sua ROM de Aladdin do SNES (`Aladdin.sfc` ou `Aladdin.smc`) dentro da mesma pasta do jogo.
-3. **Divirta-se:** Dê dois cliques em `AgrabahPort.exe`. O jogo detecta sua ROM sozinho e abre imediatamente!
-
-*(Se você não colocar a ROM antes, não tem problema: uma janela se abrirá na primeira vez pedindo para você selecionar o arquivo).*
+> **Aviso de Propriedade Intelectual:** Este projeto não inclui nem distribui arquivos de ROM protegidos por direitos autorais, artes visuais ou músicas originais. O usuário deve fornecer sua própria cópia legítima extraída do cartucho original do Super Nintendo.
 
 ---
 
-## 🎮 Controles
+## Capturas de Tela
 
-Os controles funcionam automaticamente assim que conectados (Xbox, PlayStation, Nintendo Switch e controles genéricos USB).
+<p align="center">
+  <img src="docs/images/gameplay_coop_running.png" width="48%" alt="Mercado de Agrabah - Modo Cooperativo 2 Jogadores">&nbsp;
+  <img src="docs/images/gameplay_coop_jump.png" width="48%" alt="Pulos Acrobáticos e Plataforma Cooperativa">
+</p>
+<p align="center">
+  <img src="docs/images/gameplay_rope_climb.png" width="48%" alt="Mecânica de Escalada em Cordas e Redes">&nbsp;
+  <img src="docs/images/gameplay_apple_projectile.png" width="48%" alt="Sistema de Projéteis de Maçãs do Jogador 2">
+</p>
 
-| Ação no Jogo | Teclado | Controle Xbox | Controle PlayStation | Nintendo Switch Pro |
+---
+
+## Recursos Principais
+
+- **Execução Nativa em C/C++:** Desempenho nativo no Windows, Linux e macOS sem sobrecarga de máquina virtual ou soluções de atraso artificial (*run-ahead*).
+- **Modo Co-op para 2 Jogadores:** O Jogador 2 entra na partida como o Príncipe Ali, com colisão independente com o cenário, munição própria de maçãs (`WRAM $0369`), contadores de vida separados e capacidade de escalar cordas e redes.
+- **Taxa de Quadros Fixa em 60.0 FPS:** Pipeline de sincronização que desacopla atrasos de software do VSync de hardware, eliminando micro-engasgos mesmo em monitores de alta taxa de atualização.
+- **Apresentação e Aspect Ratio Autêntico:** Proporções originais em 4:3 (padrão de TV de tubo) e 8:7 (pixels quadrados), com escala por números inteiros (*integer scaling*), bordas limpas (*pillarboxing*) e filtros visuais configuráveis (*Sharp Pixel*, *CRT Scanlines*, *Warm Composite TV*).
+- **Sem Limite de Sprites por Linha:** Remoção da barreira de 32 sprites por linha horizontal do SNES, eliminando o piscar de personagens e itens na tela.
+- **Suporte Amplo a Controles:** Camada de controle nativa via SDL3 com detecção imediata (*hotplug*) para gamepads Xbox, PlayStation (DualShock / DualSense), Nintendo Switch Pro e controles DirectInput genéricos.
+- **Arquitetura 100% Portátil:** Configurações mantidas em `config.ini` e arquivos de salvamento em `saves/`, sem necessidade de gravação no registro do Windows ou diretórios ocultos do usuário.
+- **Recursos de Conforto:** Rebobinamento visual em tempo real (`F12`), gerenciador gráfico de save-states (`F11`) e menu de opções acessível a qualquer momento (`ESC`).
+
+---
+
+## Como Jogar
+
+1. **Download:** Baixe o pacote mais recente na seção de [Releases](https://github.com/testsenvergonha-sys/AgrabahPort/releases) ou instale diretamente pelo [RecompLauncher](https://recomplauncher.com).
+2. **Forneça a sua ROM:** Coloque o arquivo do jogo americano do Super Nintendo (`Aladdin.sfc` ou `.smc`, sem cabeçalho) dentro da pasta principal do AgrabahPort.
+3. **Inicie o Jogo:** Abra o executável `AgrabahPort.exe`. O jogo identificará a ROM e iniciará imediatamente.
+
+*Caso o arquivo da ROM não esteja presente no diretório na primeira execução, uma caixa de seleção solicitará a localização do arquivo.*
+
+---
+
+## Requisitos e Integridade da ROM
+
+Para garantir precisão de endereçamento de memória e fidelidade de tempo, o AgrabahPort utiliza como referência o cartucho oficial norte-americano (USA):
+
+| Propriedade | Valor Esperado |
+|---|---|
+| **Jogo** | *Disney's Aladdin* (Versão Americana / USA) |
+| **Plataforma** | Super Nintendo Entertainment System (SNES) |
+| **Formato** | Arquivo sem cabeçalho `.sfc` (ou formato padrão `.smc`) |
+| **Tamanho** | `1.310.720` bytes |
+| **CRC-32** | `124D8E4D` |
+| **SHA-256** | `AA768B8B00123717C8D49F2C6731CDBFD80AB6A54128BAE7594E93F45E38A19E` |
+
+---
+
+## Controles Padrão
+
+O mapeamento de botões pode ser personalizado pelo arquivo `keybinds.ini` ou diretamente no menu de pausa acessado via tecla `ESC`.
+
+| Ação | Teclado (Jogador 1) | Controle Xbox | Controle PlayStation | Switch Pro |
 |---|---|---|---|---|
-| **Mover / Agachar** | Setas direcionais / `W, A, S, D` | D-Pad / Analógico Esquerdo | D-Pad / Analógico Esquerdo | D-Pad / Analógico Esquerdo |
-| **Pular** | `Z` ou `Espaço` | Botão `A` | Botão `X` (Cross) | Botão `B` |
-| **Atacar com a Espada** | `X` | Botão `X` | Botão `Quadrado` | Botão `Y` |
+| **Mover / Agachar** | Setas / `W, A, S, D` | D-Pad / Analógico Esquerdo | D-Pad / Analógico Esquerdo | D-Pad / Analógico Esquerdo |
+| **Pular** | `Z` / `Espaço` | Botão `A` | Botão `X` (Cross) | Botão `B` |
+| **Golpe de Espada** | `X` | Botão `X` | Botão `Quadrado` | Botão `Y` |
 | **Arremessar Maçã** | `C` | Botão `Y` | Botão `Triângulo` | Botão `X` |
-| **Correr** | `Shift` | Botão `B` | Botão `Círculo` | Botão `A` |
+| **Correr** | `Shift Esquerdo` | Botão `B` | Botão `Círculo` | Botão `A` |
 | **Pausar** | `Enter` | `Start` / `Menu` | `Options` | `+` (Mais) |
-| **Menu de Configurações (`ESC`)** | `ESC` | `Back` + `LB` | `Share` + `L1` | `-` + `L` |
+| **Menu de Configuração** | `ESC` | `Back` + `LB` | `Share` + `L1` | `-` + `L` |
 | **Alternar Tela Cheia** | `Alt + Enter` | — | — | — |
-| **Salvar Estado Rápido** | `Shift + F1` até `F10` | — | — | — |
-| **Carregar Estado Rápido** | `F1` até `F10` | — | — | — |
-| **Galeria Visual de Saves** | `F11` | — | — | — |
-| **Rebobinar em Tempo Real** | `F12` | `Back` + `R3` | `Share` + `R3` | `-` + `R-Stick` |
+| **Salvar / Carregar Rápido**| `Shift + F1..F10` / `F1..F10` | — | — | — |
+| **Gerenciador de Saves** | `F11` | — | — | — |
+| **Rebobinar Partida** | `F12` | `Back` + `R3` | `Share` + `R3` | `-` + `R3` |
+
+*Para jogar em modo cooperativo local, conecte um segundo controle ao computador (`SourceP2 = 2` no `config.ini`).*
 
 ---
 
-## ✨ Recursos Exclusivos da Versão PC
+## Compilação a partir do Código-Fonte
 
-- **100% Portátil:** Salve o jogo num pendrive e jogue em qualquer PC. Todos os arquivos de configuração (`config.ini`), saves de bateria e estados salvos (`saves/`) ficam organizados na pasta do próprio jogo, sem espalhar nada pelo seu computador.
-- **Latência Quase Zero:** A execução direta no hardware da sua máquina elimina o atraso de áudio e comandos típico de emuladores.
-- **Filtros CRT de Alta Definição:** Inclui filtros visuais retrô clássicos: *Sharp Pixel* (pixel art nítido), *CRT Soft Scanlines* (linhas de TV de tubo), *Warm Composite TV* (TV analógica vintage) e *LCD Grid*.
-- **Sem Limite de Sprites:** O limite clássico do Super Nintendo de 32 sprites por linha horizontal foi removido, eliminando completamente aquele efeito de personagens e maçãs piscando ou sumindo da tela.
-- **Menu ao Vivo no Jogo (`ESC`):** Ajuste volume, filtros, escala de resolução e controles em tempo real sem precisar reiniciar a partida.
-- **Rebobinamento (`F12`):** Errou aquele pulo difícil? Aperte `F12` para voltar alguns segundos no tempo!
-
----
-
-## ❓ Perguntas Frequentes (FAQ)
-
-<details>
-<summary><strong>Qual versão da ROM de Aladdin é necessária?</strong></summary>
-
-Você precisa de uma cópia legítima do cartucho americano (USA) de *Disney's Aladdin* do Super Nintendo:
-- **Formato:** `.sfc` (sem cabeçalho de copiador) ou `.smc`
-- **Tamanho:** `1.310.720` bytes (sem cabeçalho)
-- **CRC32:** `124d8e4d`
-- **SHA-256:** `aa768b8b00123717c8d49f2c6731cdbfd80ab6a54128bae7594e93f45e38a19e`
-</details>
-
-<details>
-<summary><strong>Onde meus saves ficam gravados?</strong></summary>
-
-Tudo fica guardado na subpasta `saves/` dentro da própria pasta onde o jogo está instalado. Seus arquivos de progresso (`save.srm`) e fotos de save state são fáceis de copiar e transportar para outro PC.
-</details>
-
-<details>
-<summary><strong>Posso reconfigurar os botões do teclado e controle?</strong></summary>
-
-Sim! Você pode personalizar as teclas diretamente pelo arquivo `keybinds.ini` ao lado do executável ou apertando `ESC` durante a partida para abrir o menu do launcher.
-</details>
-
----
-
-## 🛠️ Para Desenvolvedores e Compilação do Código-Fonte
-
-<details>
-<summary><strong>Clique para expandir instruções técnicas de compilação</strong></summary>
-
-### Pré-requisitos
-- Compilador Clang ou GCC com suporte a C11 e C++17
-- CMake 3.20 ou superior
-- Ninja Build
+### Requisitos de Ambiente
+- Compilador C11 e C++17 (Clang 15+, GCC 12+ ou MSVC 2022)
+- CMake 3.20+ e gerador de compilação Ninja
 - Python 3.9+
-- Toolchain Rust (`stable-x86_64-pc-windows-gnullvm` ou nativa da sua máquina)
-- Bibliotecas SDL3 e zlib
+- Bibliotecas de desenvolvimento de SDL3 e zlib
 
-### Compilando Localmente
+### Processo de Compilação
 ```bash
+# Clone o repositório com todos os submódulos necessários
 git clone --recurse-submodules https://github.com/testsenvergonha-sys/AgrabahPort.git
 cd AgrabahPort
 
-# 1. Coloque a sua ROM Aladdin.sfc na pasta roms/
+# Copie a sua ROM validada para o diretório indicado
 cp /caminho/para/Aladdin.sfc roms/Aladdin.sfc
 
-# 2. Execute a recompilação estática dos códigos 65816
+# Gere as rotinas C a partir da recompilação estática
 bash tools/regen.sh
 
-# 3. Configure e compile o binário nativo
+# Configure e compile o projeto
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target AladdinSNESRecomp
+cmake --build build --config Release
 ```
 
-O executável compilado estará pronto em `build/AgrabahPort.exe`.
-</details>
+O binário final será gerado em `build/AgrabahPort.exe`.
 
 ---
 
-## 📜 Aviso Legal
+## Termos e Isenção de Responsabilidade
 
-O AgrabahPort é uma recriação de código aberto desenvolvida por fãs via tecnologia de recompilação estática. Este projeto não possui afiliação, vínculo ou endosso de Capcom Co., Ltd., Disney Enterprises, Inc. ou Nintendo Co., Ltd. *Aladdin* e todas as marcas, personagens e artes correlatas pertencem aos seus respectivos titulares de direitos autorais.
+O AgrabahPort é uma iniciativa independente e sem fins lucrativos desenvolvida com finalidades exclusivas de pesquisa em engenharia reversa, educação e preservação de software.
+
+- *Disney's Aladdin*, nomes de personagens e identidade visual associada são marcas registradas e direitos reservados de **Disney Enterprises, Inc.**
+- Todo o código original e design do jogo para Super Nintendo são de propriedade de **Capcom Co., Ltd.**
+- Este projeto não possui afiliação, vínculo ou endosso de Capcom, Disney ou Nintendo.
+- Não é permitida qualquer forma de comercialização ou monetização deste software.

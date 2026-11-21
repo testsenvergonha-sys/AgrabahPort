@@ -1,0 +1,9 @@
+loadstate 1
+wait 20
+press left+p2:right 30
+dump t2_simul_split
+press right+p2:left 30
+dump t2_simul_cross
+press b+p2:b 15
+dump t2_simul_jump
+quit

@@ -1,0 +1,27 @@
+loadstate 1
+wait 20
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+press p2:a 2
+wait 15
+dump t2_empty_state
+press p2:a 2
+wait 10
+dump t2_empty_throw_attempt
+quit

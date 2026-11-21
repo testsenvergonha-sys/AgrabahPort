@@ -1,0 +1,8 @@
+# frame	scanline	hclock	event	port	value	sample
+1710	242	472	cpu_rd	2	02	39017
+1710	242	712	cpu_wr	0	01	39018
+1710	242	1362	cpu_ap	0	01	39018
+1710	242	1362	spc_rd	0	01	39018
+1710	3	596	spc_wr	2	03	39064
+1710	3	768	spc_wr	3	01	39064
+1710	4	102	spc_rd	0	00	39065

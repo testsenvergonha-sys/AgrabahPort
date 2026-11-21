@@ -1,0 +1,8 @@
+loadstate 1
+wait 20
+press p2:right 40
+press p2:b 12
+wait 8
+press p2:up 20
+dump t1_rope_climb
+quit

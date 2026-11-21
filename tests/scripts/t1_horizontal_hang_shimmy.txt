@@ -1,0 +1,9 @@
+loadstate 1
+wait 20
+press p2:right 25
+press p2:b 16
+press p2:up 10
+dump t1_hang_attach
+press p2:right 25
+dump t1_hang_shimmy
+quit

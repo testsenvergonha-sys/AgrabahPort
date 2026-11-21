@@ -1,0 +1,19 @@
+loadstate 1
+wait 30
+dump t4_phase1_start
+press right+p2:right 40
+dump t4_phase1_run
+press p2:a 2
+wait 12
+dump t4_phase2_throw
+press p2:right 30
+press p2:b 12
+wait 8
+press p2:up 25
+dump t4_phase3_climb
+press p2:b 10
+wait 20
+press right+p2:right 60
+dump t4_phase4_end
+wait 100
+quit

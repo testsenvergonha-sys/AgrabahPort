@@ -1,0 +1,22 @@
+{
+  "frame": 1740,
+  "inidisp": 15, "obsel": 3, "bgmode": 9, "mosaic": 0,
+  "bgsc": [73, 65, 92, 0], "bg_tile_adr": 1280,
+  "hscroll": [4, 5, 0, 0], "vscroll": [256, 256, 0, 0],
+  "m7sel": 0, "setini": 0, "m7matrix": [256, 0, 0, 256, 128, 176, 4, 256],
+  "fixed_color": 0, "windowsel": 0, "wbgobjlog": 0,
+  "window": [0, 0, 0, 0],
+  "tm": 23, "ts": 23, "tmw": 0, "tsw": 0,
+  "cgwsel": 48, "cgadsub": 33,
+  "hdmaen_last": 16,
+  "dma": [
+    {"ch": 0, "mode": 0, "indirect": 0, "fromB": 0, "bAdr": 4, "aBank": 126, "aAdr": 64672, "indBank": 255, "size": 0, "hdmaActive": 0},
+    {"ch": 1, "mode": 7, "indirect": 1, "fromB": 1, "bAdr": 255, "aBank": 255, "aAdr": 65535, "indBank": 255, "size": 65535, "hdmaActive": 0},
+    {"ch": 2, "mode": 7, "indirect": 1, "fromB": 1, "bAdr": 255, "aBank": 255, "aAdr": 65535, "indBank": 255, "size": 65535, "hdmaActive": 0},
+    {"ch": 3, "mode": 7, "indirect": 1, "fromB": 1, "bAdr": 255, "aBank": 255, "aAdr": 65535, "indBank": 255, "size": 65535, "hdmaActive": 0},
+    {"ch": 4, "mode": 2, "indirect": 0, "fromB": 0, "bAdr": 15, "aBank": 126, "aAdr": 62464, "indBank": 0, "size": 65535, "hdmaActive": 1},
+    {"ch": 5, "mode": 7, "indirect": 1, "fromB": 1, "bAdr": 255, "aBank": 255, "aAdr": 65535, "indBank": 255, "size": 65535, "hdmaActive": 0},
+    {"ch": 6, "mode": 7, "indirect": 1, "fromB": 1, "bAdr": 255, "aBank": 255, "aAdr": 65535, "indBank": 255, "size": 65535, "hdmaActive": 0},
+    {"ch": 7, "mode": 0, "indirect": 1, "fromB": 0, "bAdr": 5, "aBank": 126, "aAdr": 62496, "indBank": 126, "size": 62594, "hdmaActive": 0}
+  ]
+}

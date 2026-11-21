@@ -1,0 +1,8 @@
+loadstate 1
+wait 20
+press right+p2:a 2
+wait 12
+dump t3_hit_enemy
+wait 20
+dump t3_hit_walk_done
+quit

@@ -1,0 +1,7 @@
+loadstate 1
+wait 20
+press p2:left 80
+dump t2_screen_left
+press p2:right 120
+dump t2_screen_right
+quit

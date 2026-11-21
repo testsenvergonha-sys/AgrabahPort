@@ -1,0 +1,4 @@
+loadstate 1
+wait 30
+dump t1_abu
+quit

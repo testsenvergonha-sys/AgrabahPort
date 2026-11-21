@@ -1,0 +1,10 @@
+loadstate 1
+wait 30
+press p2:a 2
+wait 2
+dump t1_proj_f2
+wait 6
+dump t1_proj_f8
+wait 8
+dump t1_proj_f16
+quit
