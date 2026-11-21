@@ -40,11 +40,11 @@ The result is true native execution on modern systems with deterministic 60.0 FP
 
 <p align="center">
   <img src="docs/images/gameplay_agrabah_market.png" width="48%" alt="Agrabah Market - Native 60 FPS Platforming">&nbsp;
-  <img src="docs/images/gameplay_jumping.png" width="48%" alt="Authentic Physics and Traversal">
+  <img src="docs/images/gameplay_running.png" width="48%" alt="Smooth Motion and Responsive Controls">
 </p>
 <p align="center">
-  <img src="docs/images/gameplay_sword_attack.png" width="48%" alt="Fluid Combat and Responsive Controls">&nbsp;
-  <img src="docs/images/gameplay_title_intro.png" width="48%" alt="Original Presentation and Aspect Ratio">
+  <img src="docs/images/gameplay_jumping.png" width="48%" alt="Acrobatic Traversal and Authentic Physics">&nbsp;
+  <img src="docs/images/gameplay_sword_attack.png" width="48%" alt="Sword Combat and Original Presentation">
 </p>
 
 ---
