@@ -40,11 +40,11 @@ O resultado é uma execução direta no hardware hospedeiro com sincronização 
 
 <p align="center">
   <img src="docs/images/gameplay_agrabah_market.png" width="48%" alt="Mercado de Agrabah - Plataforma Nativa a 60 FPS">&nbsp;
-  <img src="docs/images/gameplay_jumping.png" width="48%" alt="Física e Movimentação Autênticas">
+  <img src="docs/images/gameplay_running.png" width="48%" alt="Movimentação Fluida e Resposta Imediata">
 </p>
 <p align="center">
-  <img src="docs/images/gameplay_sword_attack.png" width="48%" alt="Combate Fluido e Resposta Imediata">&nbsp;
-  <img src="docs/images/gameplay_title_intro.png" width="48%" alt="Apresentação e Aspect Ratio Originais">
+  <img src="docs/images/gameplay_jumping.png" width="48%" alt="Pulos Acrobáticos e Física Autêntica">&nbsp;
+  <img src="docs/images/gameplay_sword_attack.png" width="48%" alt="Combate com Espada e Apresentação Original">
 </p>
 
 ---
