@@ -28,9 +28,9 @@
 
 ## Visão Geral
 
-O **AgrabahPort** é um port nativo e de código aberto para PC de *Disney's Aladdin* (Super Nintendo, 1993), desenvolvido originalmente pela Capcom, utilizando recompilação estática antecipada (*ahead-of-time recompilation*). Em vez de rodar sobre uma camada de emulação tradicional, as instruções 65816 do processador e as rotinas de áudio do chip SPC700 do SNES foram traduzidas diretamente para código C portável e compiladas como um executável nativo.
+O **AgrabahPort** é um port nativo e de código aberto para PC de *Disney's Aladdin* (Super Nintendo, 1993), desenvolvido originalmente pela Capcom, utilizando recompilação estática antecipada (*ahead-of-time recompilation*). Em vez de rodar sobre uma camada de emulação tradicional, as instruções 65816 do processador e as rotinas de áudio do chip SPC700 do SNES foram traduzidas diretamente para código C portável e compiladas como um executável nativo independente.
 
-O resultado é uma execução direta no hardware hospedeiro com sincronização perfeita em **60.0 FPS cravados**, latência de entrada mínima, suporte completo a gamepads modernos e simulação fiel de telas CRT. Além disso, o AgrabahPort traz um modo cooperativo autêntico para **2 Jogadores simultâneos**, permitindo que o segundo jogador assuma o controle do Príncipe Ali com física, arremesso de maçãs e mecânicas de escalada independentes.
+O resultado é uma execução direta no hardware hospedeiro com sincronização em **60.0 FPS cravados**, latência de entrada mínima, suporte completo a gamepads modernos e simulação fiel de telas CRT.
 
 > **Aviso de Propriedade Intelectual:** Este projeto não inclui nem distribui arquivos de ROM protegidos por direitos autorais, artes visuais ou músicas originais. O usuário deve fornecer sua própria cópia legítima extraída do cartucho original do Super Nintendo.
 
@@ -39,12 +39,12 @@ O resultado é uma execução direta no hardware hospedeiro com sincronização 
 ## Capturas de Tela
 
 <p align="center">
-  <img src="docs/images/gameplay_coop_running.png" width="48%" alt="Mercado de Agrabah - Modo Cooperativo 2 Jogadores">&nbsp;
-  <img src="docs/images/gameplay_coop_jump.png" width="48%" alt="Pulos Acrobáticos e Plataforma Cooperativa">
+  <img src="docs/images/gameplay_agrabah_market.png" width="48%" alt="Mercado de Agrabah - Plataforma Nativa a 60 FPS">&nbsp;
+  <img src="docs/images/gameplay_jumping.png" width="48%" alt="Física e Movimentação Autênticas">
 </p>
 <p align="center">
-  <img src="docs/images/gameplay_rope_climb.png" width="48%" alt="Mecânica de Escalada em Cordas e Redes">&nbsp;
-  <img src="docs/images/gameplay_apple_projectile.png" width="48%" alt="Sistema de Projéteis de Maçãs do Jogador 2">
+  <img src="docs/images/gameplay_sword_attack.png" width="48%" alt="Combate Fluido e Resposta Imediata">&nbsp;
+  <img src="docs/images/gameplay_title_intro.png" width="48%" alt="Apresentação e Aspect Ratio Originais">
 </p>
 
 ---
@@ -52,7 +52,6 @@ O resultado é uma execução direta no hardware hospedeiro com sincronização 
 ## Recursos Principais
 
 - **Execução Nativa em C/C++:** Desempenho nativo no Windows, Linux e macOS sem sobrecarga de máquina virtual ou soluções de atraso artificial (*run-ahead*).
-- **Modo Co-op para 2 Jogadores:** O Jogador 2 entra na partida como o Príncipe Ali, com colisão independente com o cenário, munição própria de maçãs (`WRAM $0369`), contadores de vida separados e capacidade de escalar cordas e redes.
 - **Taxa de Quadros Fixa em 60.0 FPS:** Pipeline de sincronização que desacopla atrasos de software do VSync de hardware, eliminando micro-engasgos mesmo em monitores de alta taxa de atualização.
 - **Apresentação e Aspect Ratio Autêntico:** Proporções originais em 4:3 (padrão de TV de tubo) e 8:7 (pixels quadrados), com escala por números inteiros (*integer scaling*), bordas limpas (*pillarboxing*) e filtros visuais configuráveis (*Sharp Pixel*, *CRT Scanlines*, *Warm Composite TV*).
 - **Sem Limite de Sprites por Linha:** Remoção da barreira de 32 sprites por linha horizontal do SNES, eliminando o piscar de personagens e itens na tela.
@@ -91,7 +90,7 @@ Para garantir precisão de endereçamento de memória e fidelidade de tempo, o A
 
 O mapeamento de botões pode ser personalizado pelo arquivo `keybinds.ini` ou diretamente no menu de pausa acessado via tecla `ESC`.
 
-| Ação | Teclado (Jogador 1) | Controle Xbox | Controle PlayStation | Switch Pro |
+| Ação | Teclado | Controle Xbox | Controle PlayStation | Switch Pro |
 |---|---|---|---|---|
 | **Mover / Agachar** | Setas / `W, A, S, D` | D-Pad / Analógico Esquerdo | D-Pad / Analógico Esquerdo | D-Pad / Analógico Esquerdo |
 | **Pular** | `Z` / `Espaço` | Botão `A` | Botão `X` (Cross) | Botão `B` |
@@ -104,8 +103,6 @@ O mapeamento de botões pode ser personalizado pelo arquivo `keybinds.ini` ou di
 | **Salvar / Carregar Rápido**| `Shift + F1..F10` / `F1..F10` | — | — | — |
 | **Gerenciador de Saves** | `F11` | — | — | — |
 | **Rebobinar Partida** | `F12` | `Back` + `R3` | `Share` + `R3` | `-` + `R3` |
-
-*Para jogar em modo cooperativo local, conecte um segundo controle ao computador (`SourceP2 = 2` no `config.ini`).*
 
 ---
 

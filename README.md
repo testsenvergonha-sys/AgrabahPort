@@ -28,23 +28,23 @@
 
 ## Overview
 
-**AgrabahPort** is an open-source native PC port of Capcom's *Disney's Aladdin* (Super Nintendo, 1993), built using ahead-of-time (AOT) static recompilation. Rather than running through a hardware emulator, the original 65816 assembly instructions and SPC700 audio subroutines are translated directly into portable C code and compiled as a standalone desktop binary.
+**AgrabahPort** is an open-source native PC port of Capcom's *Disney's Aladdin* (Super Nintendo, 1993), built using ahead-of-time (AOT) static recompilation. Rather than running through a traditional hardware emulator, the game's original 65816 assembly instructions and SPC700 audio subroutines are translated directly into portable C code and compiled as a standalone desktop binary.
 
-The result is true native execution on modern systems with deterministic 60.0 FPS frame pacing, sub-millisecond input response, authentic CRT simulation shaders, and native modern gamepad support. AgrabahPort also introduces an authentic 2-Player Cooperative mode featuring Prince Ali as a fully playable second character with decoupled physics, independent apple ammo, and separate controls.
+The result is true native execution on modern systems with deterministic 60.0 FPS frame pacing, sub-millisecond input response, authentic CRT simulation shaders, and native gamepad support.
 
 > **Legal Notice:** This project does not contain any copyrighted ROM data, artwork, audio, or game assets. Users must provide their own legally acquired copy of the original Super Nintendo cartridge dump.
 
 ---
 
-## Screenshots
+## In-Game Screenshots
 
 <p align="center">
-  <img src="docs/images/gameplay_coop_running.png" width="48%" alt="Agrabah Market - 2-Player Co-op Mode">&nbsp;
-  <img src="docs/images/gameplay_coop_jump.png" width="48%" alt="Acrobatic Jumps and Platforming">
+  <img src="docs/images/gameplay_agrabah_market.png" width="48%" alt="Agrabah Market - Native 60 FPS Platforming">&nbsp;
+  <img src="docs/images/gameplay_jumping.png" width="48%" alt="Authentic Physics and Traversal">
 </p>
 <p align="center">
-  <img src="docs/images/gameplay_rope_climb.png" width="48%" alt="Vertical Rope and Net Climbing">&nbsp;
-  <img src="docs/images/gameplay_apple_projectile.png" width="48%" alt="Independent Apple Projectile System">
+  <img src="docs/images/gameplay_sword_attack.png" width="48%" alt="Fluid Combat and Responsive Controls">&nbsp;
+  <img src="docs/images/gameplay_title_intro.png" width="48%" alt="Original Presentation and Aspect Ratio">
 </p>
 
 ---
@@ -52,9 +52,8 @@ The result is true native execution on modern systems with deterministic 60.0 FP
 ## Key Features
 
 - **Ahead-of-Time Static Recompilation:** Runs as a compiled, native C/C++ executable on Windows, Linux, and macOS without emulation overhead.
-- **Authentic 2-Player Co-op:** Player 2 enters as Prince Ali, featuring decoupled collision detection, independent apple projectile pool (`WRAM $0369`), separate health counters, and rope/net traversal.
 - **Locked 60.0 FPS & Deterministic Frame Pacing:** Fully decoupled software delay and hardware VSync pipeline to ensure smooth motion across high-refresh displays.
-- **Display Pipeline:** Authentic 4:3 CRT and 8:7 square-pixel presentation modes with integer scaling, pillarboxing, and post-processing shaders (*Sharp Pixel*, *CRT Scanlines*, *Warm Composite TV*).
+- **Display Pipeline:** Authentic 4:3 CRT and 8:7 square-pixel presentation modes with integer scaling, clean pillarboxing, and post-processing shaders (*Sharp Pixel*, *CRT Scanlines*, *Warm Composite TV*).
 - **No Scanline Sprite Limit:** Removes the original 32-sprites-per-scanline hardware bottleneck, eliminating sprite flickering during heavy action.
 - **Zero-Config Gamepad Support:** Native SDL3 controller layer with hotplugging and automatic mapping for Xbox, PlayStation DualShock/DualSense, Nintendo Switch Pro, and standard DirectInput controllers.
 - **Fully Portable Runtime:** Self-contained configuration (`config.ini`) and save directory (`saves/`). No system registry dependencies.
@@ -91,7 +90,7 @@ To ensure timing and memory layout accuracy, AgrabahPort requires the original N
 
 Input bindings are fully customizable via `keybinds.ini` or in-game via the `ESC` settings menu.
 
-| Action | Keyboard (Player 1) | Xbox Controller | PlayStation | Switch Pro |
+| Action | Keyboard | Xbox Controller | PlayStation | Switch Pro |
 |---|---|---|---|---|
 | **Move / Crouch** | Arrow Keys / `W, A, S, D` | D-Pad / Left Stick | D-Pad / Left Stick | D-Pad / Left Stick |
 | **Jump** | `Z` / `Space` | `A` Button | `Cross` (X) | `B` Button |
@@ -104,8 +103,6 @@ Input bindings are fully customizable via `keybinds.ini` or in-game via the `ESC
 | **Quick Save / Load** | `Shift + F1..F10` / `F1..F10` | — | — | — |
 | **Save State Menu** | `F11` | — | — | — |
 | **Real-time Rewind** | `F12` | `Back` + `R3` | `Share` + `R3` | `-` + `R3` |
-
-*For local 2-Player Co-op, connect a second controller (`SourceP2 = 2` in `config.ini`).*
 
 ---
 
