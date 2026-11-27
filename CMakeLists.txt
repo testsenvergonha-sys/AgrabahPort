@@ -147,4 +147,9 @@ target_include_directories(AladdinSNESRecomp PRIVATE
 
 # Setup Host self-rebuild invokes `cmake --build --target <exe_basename>`
 # (`AgrabahPort`), while CI / developer builds may invoke `AladdinSNESRecomp`.
-add_custom_target(AgrabahPort DEPENDS AladdinSNESRecomp)
+# On non-Windows POSIX hosts, OUTPUT_NAME "AgrabahPort" already defines the
+# Ninja rule `AgrabahPort`, so adding a second custom target triggers
+# "multiple rules generate AgrabahPort". Only Windows (.exe) needs the alias.
+if(WIN32)
+    add_custom_target(AgrabahPort DEPENDS AladdinSNESRecomp)
+endif()
