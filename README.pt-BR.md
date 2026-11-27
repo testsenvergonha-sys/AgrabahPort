@@ -118,6 +118,7 @@ Não. Antes de aplicar a atualização, o launcher faz backup de `saves/` em `ba
 
 ### Build local com sua própria ROM (apenas uso pessoal local)
 ```bash
+# Clone o repositório com todos os submódulos necessários
 git clone --recurse-submodules https://github.com/testsenvergonha-sys/AgrabahPort.git
 cd AgrabahPort
 
@@ -125,7 +126,7 @@ cp /caminho/para/Aladdin.sfc roms/Aladdin.sfc
 bash tools/regen.sh
 
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target AladdinSNESRecomp
+cmake --build build --config Release
 ```
 
 ### Build Setup Host (modelo seguro para distribuição pública)
@@ -137,6 +138,6 @@ cmake --build build-setup --target AladdinSNESRecomp
 
 ---
 
-## 📜 Aviso Legal
+## Termos e Isenção de Responsabilidade
 
 O AgrabahPort é um projeto independente e não comercial criado por fãs usando recompilação estática. Não possui afiliação, vínculo nem endosso da Disney Enterprises, Inc., Capcom Co., Ltd. ou Nintendo Co., Ltd. Nenhum arquivo de ROM, áudio ou sprite protegido por direitos autorais é distribuído por este projeto; o usuário deve fornecer sua própria cópia legal.

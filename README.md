@@ -124,6 +124,7 @@ Next to the executable inside `saves/` and `last_run_report.json` when `portable
 
 ### Build with local ROM (for personal local testing only)
 ```bash
+# Clone the repository with all submodules
 git clone --recurse-submodules https://github.com/testsenvergonha-sys/AgrabahPort.git
 cd AgrabahPort
 
@@ -131,7 +132,7 @@ cp /path/to/Aladdin.sfc roms/Aladdin.sfc
 bash tools/regen.sh
 
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target AladdinSNESRecomp
+cmake --build build --config Release
 ```
 
 ### Build public-safe Setup Host (no ROM-derived code compiled in)
@@ -143,6 +144,6 @@ cmake --build build-setup --target AladdinSNESRecomp
 
 ---
 
-## 📜 Legal Notice
+## License & Disclaimer
 
 AgrabahPort is an unofficial, non-commercial fan project and static recompilation engine. It is not affiliated with, endorsed by, or sponsored by Disney Enterprises, Inc., Capcom Co., Ltd., or Nintendo Co., Ltd. No ROM files, game assets, or copyrighted audiovisual content are distributed by this project; users must provide their own legally obtained cartridge dump.
