@@ -4,6 +4,16 @@ Todas as mudanças notáveis no projeto **AgrabahPort** são documentadas neste 
 
 ---
 
+## [1.0.1] - 2026-11-27
+
+### 🛠️ Correções do Setup Pack, Widescreen 16:9 e Launcher
+- **Recompilação local do Setup Host (`target AgrabahPort`):** Adicionei o target `AgrabahPort` em `CMakeLists.txt` mapeado para `AladdinSNESRecomp` para que o `snesrecomp_codegen_host` conclua a compilação local sem falhar com `unknown target 'AgrabahPort'`.
+- **Headers autorais versionados em `src/`:** Movi `agrabah_launcher_shell.h` e `agrabah_updater.h` para `src/` (fora do submódulo `recomp-ui`) garantindo que sejam empacotados em todos os Setup Packs gerados pelo CI sem erro de header ausente.
+- **Widescreen 16:9 e Fullscreen Borderless padrão out-of-the-box:** Passei a gerar `Widescreen = 1` junto de `Fullscreen = 1` no `config.ini` inicial de portas `native_widescreen` (com fallback automático quando a chave estiver ausente), evitando que o primeiro boot abra preso em 4:3 (`256×224`).
+- **Controle real de Widescreen no Launcher:** Sincronizei `widescreen` entre `g_config` e o modelo do launcher, adicionei o checkbox **Widescreen (16:9)** na aba **Settings → Display** e corrigi o badge **ASPECT** da aba **Play** para refletir o estado real do widescreen e do aspecto de pixels.
+
+---
+
 ## [1.0.0] - 2026-11-27
 
 ### 🏰 Novo Launcher Autoral & Botões do Super Nintendo

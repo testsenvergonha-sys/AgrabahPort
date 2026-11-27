@@ -647,12 +647,6 @@ static int AladdinWindowBaseWidth(int frame_w)
     return (frame_w * 5 + 2) / 4;
 }
 
-static const char *const kAladdinAspectLabels[] = {
-    "16:9 Widescreen (Recomendado)",
-    "8:7 Pixels Quadrados",
-    "1:1 Quadro Original",
-};
-
 static void AladdinConfigureLauncher(RecompLauncherCGameInfo *info)
 {
     if (info)

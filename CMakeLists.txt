@@ -144,3 +144,7 @@ target_include_directories(AladdinSNESRecomp PRIVATE
 
 # Netplay is not built into this target.
 # No multitap: two seats, one controller per port.
+
+# Setup Host self-rebuild invokes `cmake --build --target <exe_basename>`
+# (`AgrabahPort`), while CI / developer builds may invoke `AladdinSNESRecomp`.
+add_custom_target(AgrabahPort DEPENDS AladdinSNESRecomp)
