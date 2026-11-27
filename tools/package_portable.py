@@ -1,26 +1,52 @@
 import os
+import sys
 import zipfile
 
-dist_dir = r"C:\Users\Samsung\.gemini\antigravity\scratch\snes-port\AladdinSNESRecomp\dist"
+project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+build_dir = os.path.join(project_dir, "build")
+dist_dir = os.path.join(project_dir, "dist")
+cache_path = os.path.join(build_dir, "CMakeCache.txt")
+
+# Copyright / DMCA protection: public distributable archives must NEVER include
+# binaries linked against ROM-derived src/gen/*.c code. Only Setup Host builds
+# (-DSNESRECOMP_SETUP_HOST=ON) may be packaged for distribution.
+setup_host_ok = False
+if os.path.exists(cache_path):
+    with open(cache_path, "r", encoding="utf-8", errors="ignore") as cf:
+        for line in cf:
+            if line.strip() == "SNESRECOMP_SETUP_HOST:BOOL=ON":
+                setup_host_ok = True
+                break
+
+if not setup_host_ok:
+    print(
+        "ERROR [Copyright/DMCA Guard]: build/CMakeCache.txt does not have "
+        "SNESRECOMP_SETUP_HOST:BOOL=ON.\n"
+        "Public packages must use Setup Host mode so no ROM-derived src/gen code "
+        "is distributed. Configure with -DSNESRECOMP_SETUP_HOST=ON first.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+with open(os.path.join(project_dir, "VERSION"), "r", encoding="utf-8") as vf:
+    ver = vf.read().strip()
+
 os.makedirs(dist_dir, exist_ok=True)
-zip_path = os.path.join(dist_dir, "agrabahport-0.1.3-windows-x64-portable.zip")
+prefix = f"agrabahport-{ver}-windows-x64-setup"
+zip_path = os.path.join(dist_dir, f"{prefix}.zip")
 if os.path.exists(zip_path):
     os.remove(zip_path)
-
-build_dir = r"C:\Users\Samsung\.gemini\antigravity\scratch\snes-port\AladdinSNESRecomp\build"
-project_dir = r"C:\Users\Samsung\.gemini\antigravity\scratch\snes-port\AladdinSNESRecomp"
-prefix = "agrabahport-0.1.3-windows-x64-portable"
 
 config_content = """[General]
 Autosave = 0
 DisableFrameDelay = 1
 SkipLauncher = 0
 RunAhead = 0
-DisplayPerfInTitle = 1
+DisplayPerfInTitle = 0
 
 [Graphics]
 WindowSize = Auto
-Fullscreen = 0
+Fullscreen = 1
 WindowScale = 3
 NewRenderer = 1
 IgnoreAspectRatio = 0
@@ -31,8 +57,8 @@ Mode7Supersample = 1
 DisplayAspect = 4:3
 OutputMethod = SDL
 LinearFiltering = 0
-Shader = 
-Widescreen = 0
+Shader = assets/shaders/sharp.glslp
+Widescreen = 1
 FrameBlend = 0
 VSync = 1
 Renderer = auto
@@ -74,7 +100,7 @@ SourceP1 = 1
 SourceP2 = 1
 
 [Netplay]
-PlayerName = 
+PlayerName =
 
 [Rewind]
 Enabled = 1
@@ -82,65 +108,37 @@ Depth = 50
 Interval = 15
 """
 
-how_to_play_pt = """=======================================================
-               AGRABAHPORT v0.1.3 (PORTATIL)
-      Disney's Aladdin (Super Nintendo, 1993) no PC
+how_to_play_pt = f"""=======================================================
+               AGRABAHPORT v{ver} (SETUP HOST)
+          Aladdin (Super Nintendo, 1993) no PC
 =======================================================
 
-COMO JOGAR EM 3 PASSOS:
+COMO JOGAR EM 3 PASSOS (SEM ROM INCLUSA):
 
-1. Coloque a sua ROM legal do Aladdin (.sfc ou .smc) nesta mesma pasta.
-   - Nome recomendado: Aladdin.sfc ou Aladdin.smc
-   - Tamanho exato: 1.310.720 bytes (CRC32: 124d8e4d)
+1. Coloque a sua ROM legal de Aladdin (USA, .sfc/.smc) nesta pasta.
+   - Tamanho esperado (headerless): 1.310.720 bytes (CRC32: 124d8e4d)
 
-2. De dois cliques em 'AgrabahPort.exe'. O jogo abre direto!
+2. Execute 'AgrabahPort.exe' e siga o assistente inicial do launcher
+   para gerar e compilar os arquivos locais a partir da sua ROM.
 
-3. Bom jogo! Seus saves e configuracoes ficam 100% salvos aqui mesmo.
-
--------------------------------------------------------
-CONTROLES PADRAO:
--------------------------------------------------------
-- Movimentacao:   Setas do Teclado ou D-Pad / Analogico
-- Pular:          Z ou Espaco (Controle: Botao A / X)
-- Cortar (Espada):X (Controle: Botao X / Quadrado)
-- Jogar Maca:     C (Controle: Botao Y / Triangulo)
-- Correr:         Shift (Controle: Botao B / Circulo)
-- Pausar:         Enter (Controle: Start)
-- Menu / Opcoes:  ESC
-- Tela Cheia:     Alt + Enter
-- Rebobinar:      F12
-- Save States:    F11 (Menu Visual) ou Shift+F1..F10
+3. Bom jogo! Seus saves, mods e configuracoes ficam salvos aqui mesmo.
 =======================================================
 """
 
-how_to_play_en = """=======================================================
-               AGRABAHPORT v0.1.3 (PORTABLE)
-      Disney's Aladdin (Super Nintendo, 1993) on PC
+how_to_play_en = f"""=======================================================
+               AGRABAHPORT v{ver} (SETUP HOST)
+          Aladdin (Super Nintendo, 1993) on PC
 =======================================================
 
-HOW TO PLAY IN 3 STEPS:
+HOW TO PLAY IN 3 STEPS (NO ROM INCLUDED):
 
-1. Place your legal Aladdin SNES ROM (.sfc or .smc) in this folder.
-   - Recommended filename: Aladdin.sfc or Aladdin.smc
-   - Exact size: 1,310,720 bytes (CRC32: 124d8e4d)
+1. Place your legal Aladdin SNES ROM (USA, .sfc/.smc) in this folder.
+   - Expected headerless size: 1,310,720 bytes (CRC32: 124d8e4d)
 
-2. Double-click 'AgrabahPort.exe'. The game starts instantly!
+2. Run 'AgrabahPort.exe' and follow the launcher setup wizard to
+   generate and build locally using your own cartridge dump.
 
-3. Enjoy! All settings and saves stay 100% inside this folder.
-
--------------------------------------------------------
-DEFAULT CONTROLS:
--------------------------------------------------------
-- Movement:       Arrow Keys or D-Pad / Left Stick
-- Jump:           Z or Space (Controller: A / Cross)
-- Sword Slash:    X (Controller: X / Square)
-- Throw Apple:    C (Controller: Y / Triangle)
-- Run:            Shift (Controller: B / Circle)
-- Pause:          Enter (Controller: Start)
-- Settings Menu:  ESC
-- Fullscreen:     Alt + Enter
-- Rewind:         F12
-- Save States:    F11 (Browser) or Shift+F1..F10
+3. Enjoy! All settings, mods, and saves stay cleanly in this folder.
 =======================================================
 """
 

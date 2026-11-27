@@ -4,6 +4,25 @@ Todas as mudanças notáveis no projeto **AgrabahPort** serão documentadas nest
 
 ---
 
+## [1.0.0] - 2026-11-27
+
+### 🏰 Novo Launcher Autoral & Botões do Super Nintendo
+- **Interface autoral (*Palace Night*):** Desenhei um novo shell completo em `recomp-ui` com temática própria de palácio árabe (arcos, lanternas, estrela geométrica e emblema da lâmpada), organizado nas abas **Play**, **Settings**, **Controls**, **Mods** e **About**.
+- **Controles visuais do Super Nintendo:** Substituí as dicas genéricas no rodapé por ícones visuais dos botões do SNES (**`L` / `R`** para trocar de aba, **`( B )`** para confirmar e **`( A )`** para voltar, além de `Enter` / `Esc`).
+- **Configuração inicial refinada:** O jogo passa a iniciar em **Tela Cheia (Borderless)** por padrão (`Fullscreen = 1`, alternável no launcher) e com o contador de FPS na janela (`DisplayPerfInTitle = 0`) desativado por padrão, podendo ser ligado direto na aba **Settings**.
+
+### 🔄 Auto-Updater Seguro via GitHub Releases
+- **Verificação automática ao abrir:** Ao iniciar o launcher, consulto a API pública do repositório `testsenvergonha-sys/AgrabahPort` sem travar a interface e exibo o modal de atualização com notas de release quando houver versão mais nova.
+- **Preservação rígida dos dados do usuário:** Antes de aplicar qualquer pacote, crio backup automático de `saves/` em `backups/pre_update_<versão>/` e removo da extração qualquer entrada protegida (`saves/`, `mods/`, `states/`, `config.ini`, `keybinds.ini`, `rom.cfg`, `portable.txt`, `.sfc`/`.smc`/`.srm`), gerando também `AgrabahPort.exe.old` para rollback seguro.
+
+### 🎞️ Widescreen Adaptativo 16:9 e Correções Visuais
+- **Cobertura widescreen nas fases finais e chefes:** Implementei suporte adaptativo 16:9 com provedores de BG2 em `src/main.c` e correções de PPU/raster em `snesrecomp` para Caverna das Maravilhas (feixe da lâmpada), Escape no Tapete Mágico, fase da Lava (BG2 wave) e confrontos finais contra Jafar, limpando corretamente faixas laterais quando o mapa não realiza streaming contínuo.
+
+### ⚡ Turbo Fluido e Ritmo de Quadros
+- **Correção do modo Turbo (`Tab`):** Desacoplei a cadência do VSync durante o fast-forward e introduzi um portão temporal de apresentação (~50 Hz) para evitar engasgos pesados em modo Turbo, restaurando instantaneamente a sincronia de 60.0 FPS ao soltar `Tab`.
+
+---
+
 ## [0.1.3] - 2026-11-19
 
 ### ⚡ Framepacing Perfeito e 60.0 FPS Travados

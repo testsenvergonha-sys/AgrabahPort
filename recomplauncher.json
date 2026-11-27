@@ -5,10 +5,10 @@
   "repo": "testsenvergonha-sys/AgrabahPort",
   "game": {
     "kind": "iso",
-    "label": "Your legal headerless SNES ROM (.sfc) of Disney's Aladdin (USA).",
+    "label": "Your legal headerless SNES ROM (.sfc) of Aladdin (USA).",
     "dumps": [
       {
-        "name": "Disney's Aladdin (USA) (Headerless .sfc)",
+        "name": "Aladdin (USA) (Headerless .sfc)",
         "crc32": "124d8e4d",
         "size": 1310720
       }
@@ -37,13 +37,14 @@
       ],
       "ensure": {
         "General/DisableFrameDelay": "1",
+        "General/DisplayPerfInTitle": "0",
         "Graphics/WindowSize": "Auto",
         "Graphics/WindowScale": "3",
-        "Graphics/Fullscreen": "0",
+        "Graphics/Fullscreen": "1",
         "Graphics/VSync": "1",
         "Graphics/OutputMethod": "SDL",
         "Graphics/Renderer": "auto",
-        "Graphics/Widescreen": "0",
+        "Graphics/Widescreen": "1",
         "Graphics/DisplayAspect": "4:3",
         "Graphics/Shader": "assets/shaders/sharp.glslp",
         "Sound/Volume": "100"
@@ -75,7 +76,7 @@
         { "label": "Windowed", "set": { "Graphics/Fullscreen": "0" } },
         { "label": "Fullscreen", "set": { "Graphics/Fullscreen": "1" } }
       ],
-      "defaults": { "Graphics/Fullscreen": "0" }
+      "defaults": { "Graphics/Fullscreen": "1" }
     },
     {
       "id": "window_scale",
