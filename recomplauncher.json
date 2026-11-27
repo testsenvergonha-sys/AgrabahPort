@@ -36,13 +36,13 @@
         { "path": "{install}/config.ini" }
       ],
       "ensure": {
-        "General/DisableFrameDelay": "1",
+        "General/DisableFrameDelay": "0",
         "General/DisplayPerfInTitle": "0",
         "Graphics/WindowSize": "Auto",
         "Graphics/WindowScale": "3",
         "Graphics/Fullscreen": "1",
         "Graphics/VSync": "1",
-        "Graphics/OutputMethod": "SDL",
+        "Graphics/OutputMethod": "OpenGL",
         "Graphics/Renderer": "auto",
         "Graphics/Widescreen": "1",
         "Graphics/DisplayAspect": "4:3",

@@ -39,7 +39,7 @@ if os.path.exists(zip_path):
 
 config_content = """[General]
 Autosave = 0
-DisableFrameDelay = 1
+DisableFrameDelay = 0
 SkipLauncher = 0
 RunAhead = 0
 DisplayPerfInTitle = 0
@@ -55,7 +55,7 @@ Mode7Enabled = 0
 Mode7Scale = 8
 Mode7Supersample = 1
 DisplayAspect = 4:3
-OutputMethod = SDL
+OutputMethod = OpenGL
 LinearFiltering = 0
 Shader = assets/shaders/sharp.glslp
 Widescreen = 1
